@@ -1,60 +1,62 @@
 package com.ancestor.wifimate.router;
 
+import android.util.Log;
 import android.widget.Toast;
 
 import com.ancestor.wifimate.activity.MessageActivity;
 import com.ancestor.wifimate.activity.WiFiDirectActivity;
 import com.ancestor.wifimate.config.Configuration;
 import com.ancestor.wifimate.fragment.DeviceDetailFragment;
-import com.ancestor.wifimate.router.tcp.TcpReciever;
+import com.ancestor.wifimate.router.tcp.TCPReceiver;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * The main receiver class
+ * The main receiver runnable of the application.
  *
- * @author Matthew Vertescher
- * @author Peter Henderson
+ * Created by Mihai.Traistaru on 23.10.2015
  */
 public class Receiver implements Runnable {
 
+    private static final String TAG = Receiver.class.getName();
+
     /**
-     * Flag if the receiver has been running to prevent overzealous thread spawning
+     * Flag if the receiver has been running to prevent overzealous thread spawning.
      */
     public static boolean running = false;
 
     /**
-     * A ref to the activity
+     * A reference to the main wiFiDirectActivity of the app.
      */
-    static WiFiDirectActivity activity;
+    static WiFiDirectActivity wiFiDirectActivity;
 
     /**
-     * Constructor with activity
+     * Constructor with a reference to the main wiFiDirectActivity of the app.
      *
-     * @param a
+     * @param wiFiDirectActivity the main wiFiDirectActivity of the app.
      */
-    public Receiver(WiFiDirectActivity a) {
-        Receiver.activity = a;
+    public Receiver(WiFiDirectActivity wiFiDirectActivity) {
+        Receiver.wiFiDirectActivity = wiFiDirectActivity;
         running = true;
     }
 
     /**
-     * GUI thread to send somebody joined notification
+     * Displays a notification when a peer joined.
      *
-     * @param smac
+     * @param MAC the MAC address of the one that joined.
      */
-    public static void somebodyJoined(String smac) {
+    public static void notifyPeerJoined(String MAC) {
 
         final String message;
         final String msg;
-        message = msg = smac + " has joined.";
-        final String name = smac;
-        activity.runOnUiThread(new Runnable() {
+        message = msg = MAC + " has joined.";
+        final String name = MAC;
+        wiFiDirectActivity.runOnUiThread(new Runnable() {
 
             @Override
             public void run() {
-                if (activity.isVisible) {
-                    Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
+                if (wiFiDirectActivity.isVisible) {
+                    Toast.makeText(wiFiDirectActivity, message, Toast.LENGTH_LONG).show();
                 } else {
                     MessageActivity.addMessage(name, msg);
                 }
@@ -63,22 +65,21 @@ public class Receiver implements Runnable {
     }
 
     /**
-     * Somebody left notification on the UI thread
+     * Displays a notification when a peer left.
      *
-     * @param smac
+     * @param MAC the MAC address of the one that left.
      */
-    public static void somebodyLeft(String smac) {
+    public static void notifyPeerLeft(String MAC) {
 
         final String message;
         final String msg;
-        message = msg = smac + " has left.";
-        final String name = smac;
-        activity.runOnUiThread(new Runnable() {
-
+        message = msg = MAC + " has left.";
+        final String name = MAC;
+        wiFiDirectActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (activity.isVisible) {
-                    Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
+                if (wiFiDirectActivity.isVisible) {
+                    Toast.makeText(wiFiDirectActivity, message, Toast.LENGTH_LONG).show();
                 } else {
                     MessageActivity.addMessage(name, msg);
                 }
@@ -90,9 +91,9 @@ public class Receiver implements Runnable {
      * Update the list of peers on the front page
      */
     public static void updatePeerList() {
-        if (activity == null)
+        if (wiFiDirectActivity == null)
             return;
-        activity.runOnUiThread(new Runnable() {
+        wiFiDirectActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 DeviceDetailFragment.updateGroupChatMembersMessage();
@@ -101,92 +102,96 @@ public class Receiver implements Runnable {
         });
     }
 
-    /**
-     * Main thread runner
-     */
     public void run() {
+
         /*
-         * A queue for received packets
+         * A queue for the received packets
 		 */
-        ConcurrentLinkedQueue<Packet> packetQueue = new ConcurrentLinkedQueue<Packet>();
+        ConcurrentLinkedQueue<Packet> packetQueue = new ConcurrentLinkedQueue<>();
 
 		/*
          * Receiver thread
 		 */
-        new Thread(new TcpReciever(Configuration.RECEIVE_PORT, packetQueue)).start();
+        new Thread(new TCPReceiver(Configuration.RECEIVE_PORT, packetQueue)).start();
 
-        Packet p;
+        Packet packet;
 
 		/*
-		 * Keep going through packets
+         * Keep going through packets
 		 */
-        while (true) {
-			/*
-			 * If the queue is empty, sleep to give up CPU cycles
+        do {
+            /*
+             * If the queue is empty, sleep to give up CPU cycles
 			 */
             while (packetQueue.isEmpty()) {
                 try {
                     Thread.sleep(2000);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    Log.e(TAG, "TCPReceiver thread couldn't sleep", e);
                 }
             }
 
 			/*
-			 * Pop a packet off the queue
+             * Pop a packet from the packet queue
 			 */
-            p = packetQueue.remove();
+            packet = packetQueue.remove();
 
-
-			/*
-			 * If it's a hello, this is special and need to go through the connection mechanism for any node receiving this
-			 */
-            if (p.getType().equals(Packet.TYPE.HELLO)) {
-                // Put it in your routing table
-                for (AllEncompasingP2PClient c : MeshNetworkManager.routingTable.values()) {
-                    if (c.getMac().equals(MeshNetworkManager.getSelf().getMac()) || c.getMac().equals(p.getSenderMac()))
+            if (packet.getType().equals(Packet.TYPE.HELLO)) { // this is a special type that needs to go through the connection mechanism for any node receiving this
+                for (Peer c : MeshNetworkRouter.routingTable.values()) {
+                    if (c.getMacAddress().equals(MeshNetworkRouter.getSelf().getMacAddress()) || c.getMacAddress().equals(packet.getSenderMac())) {
                         continue;
-                    Packet update = new Packet(Packet.TYPE.UPDATE, Packet.getMacAsBytes(p.getSenderMac()), c.getMac(),
-                            MeshNetworkManager.getSelf().getMac());
-                    Sender.queuePacket(update);
+                    }
+                    Packet update = new Packet(
+                            Packet.TYPE.UPDATE,
+                            Packet.getMacAsBytes(packet.getSenderMac()),
+                            c.getMacAddress(),
+                            MeshNetworkRouter.getSelf().getMacAddress()
+                    );
+                    Sender.queuePacket(update); // enqueue it to be sent
                 }
-
-                MeshNetworkManager.routingTable.put(p.getSenderMac(),
-                        new AllEncompasingP2PClient(p.getSenderMac(), p.getSenderIP(), p.getSenderMac(),
-                                MeshNetworkManager.getSelf().getMac()));
+                MeshNetworkRouter.routingTable.put(packet.getSenderMac(), new Peer(
+                                packet.getSenderMac(),
+                                packet.getSenderIP(),
+                                packet.getSenderMac(),
+                                MeshNetworkRouter.getSelf().getMacAddress()
+                        )
+                ); // put it in the routing table
 
                 // Send routing table back as HELLO_ACK
-                byte[] rtable = MeshNetworkManager.serializeRoutingTable();
+                byte[] routingTable = MeshNetworkRouter.serializeRoutingTable();
 
-                Packet ack = new Packet(Packet.TYPE.HELLO_ACK, rtable, p.getSenderMac(), MeshNetworkManager.getSelf()
-                        .getMac());
+                Packet ack = new Packet(
+                        Packet.TYPE.HELLO_ACK,
+                        routingTable, packet.getSenderMac(),
+                        MeshNetworkRouter.getSelf().getMacAddress()
+                );
                 Sender.queuePacket(ack);
-                somebodyJoined(p.getSenderMac());
+                notifyPeerJoined(packet.getSenderMac());
                 updatePeerList();
             } else {
-                // If you're the intended target for a non hello message
-                if (p.getMac().equals(MeshNetworkManager.getSelf().getMac())) {
-                    //if we get a hello ack populate the table
-                    if (p.getType().equals(Packet.TYPE.HELLO_ACK)) {
-                        MeshNetworkManager.deserializeRoutingTableAndAdd(p.getData());
-                        MeshNetworkManager.getSelf().setGroupOwnerMac(p.getSenderMac());
-                        somebodyJoined(p.getSenderMac());
+                if (packet.getMacAddress().equals(MeshNetworkRouter.getSelf().getMacAddress())) { // self is the intended target for a non hello message
+                    if (packet.getType().equals(Packet.TYPE.HELLO_ACK)) { // if we get a hello ack populate the table
+                        MeshNetworkRouter.deserializeRoutingTableAndAdd(packet.getData());
+                        MeshNetworkRouter.getSelf().setGroupOwnerMacAddress(packet.getSenderMac());
+                        notifyPeerJoined(packet.getSenderMac());
                         updatePeerList();
-                    } else if (p.getType().equals(Packet.TYPE.UPDATE)) {
-                        //if it's an update, add to the table
-                        String emb_mac = Packet.getMacBytesAsString(p.getData(), 0);
-                        MeshNetworkManager.routingTable.put(emb_mac,
-                                new AllEncompasingP2PClient(emb_mac, p.getSenderIP(), p.getMac(), MeshNetworkManager
-                                        .getSelf().getMac()));
+                    } else if (packet.getType().equals(Packet.TYPE.UPDATE)) { // an update, add to the table
+                        String mac = Packet.getMacBytesAsString(packet.getData(), 0);
+                        MeshNetworkRouter.routingTable.put(mac, new Peer(
+                                        mac,
+                                        packet.getSenderIP(),
+                                        packet.getMacAddress(),
+                                        MeshNetworkRouter.getSelf().getMacAddress()
+                                )
+                        );
 
-                        final String message = emb_mac + " joined the conversation";
-                        final String name = p.getSenderMac();
-                        activity.runOnUiThread(new Runnable() {
-
+                        final String message = mac + " joined the conversation";
+                        final String name = packet.getSenderMac();
+                        wiFiDirectActivity.runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                if (activity.isVisible) {
-                                    Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
+                                if (wiFiDirectActivity.isVisible) {
+                                    Toast.makeText(wiFiDirectActivity, message, Toast.LENGTH_LONG).show();
                                 } else {
                                     MessageActivity.addMessage(name, message);
                                 }
@@ -194,29 +199,27 @@ public class Receiver implements Runnable {
                         });
                         updatePeerList();
 
-                    } else if (p.getType().equals(Packet.TYPE.MESSAGE)) {
-                        //If it's a message display the message and update the table if they're not there
-                        // for whatever reason
-                        final String message = p.getSenderMac() + " says:\n" + new String(p.getData());
-                        final String msg = new String(p.getData());
-                        final String name = p.getSenderMac();
+                    } else if (packet.getType().equals(Packet.TYPE.MESSAGE)) {
+                        final String message = packet.getSenderMac() + " says:\n" + new String(packet.getData());
+                        final String msg = new String(packet.getData());
+                        final String name = packet.getSenderMac();
 
-                        if (!MeshNetworkManager.routingTable.contains(p.getSenderMac())) {
-							/*
-							 * Update your routing table if for some reason this
-							 * guy isn't in it
-							 */
-                            MeshNetworkManager.routingTable.put(p.getSenderMac(),
-                                    new AllEncompasingP2PClient(p.getSenderMac(), p.getSenderIP(), p.getSenderMac(),
-                                            MeshNetworkManager.getSelf().getGroupOwnerMac()));
+                        //noinspection SuspiciousMethodCalls
+                        if (!MeshNetworkRouter.routingTable.contains(packet.getSenderMac())) {
+                            MeshNetworkRouter.routingTable.put(packet.getSenderMac(), new Peer(
+                                            packet.getSenderMac(),
+                                            packet.getSenderIP(),
+                                            packet.getSenderMac(),
+                                            MeshNetworkRouter.getSelf().getGroupOwnerMacAddress()
+                                    )
+                            ); // update the routing table if for some reason this guy isn't in it
                         }
 
-                        activity.runOnUiThread(new Runnable() {
-
+                        wiFiDirectActivity.runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                if (activity.isVisible) {
-                                    Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
+                                if (wiFiDirectActivity.isVisible) {
+                                    Toast.makeText(wiFiDirectActivity, message, Toast.LENGTH_LONG).show();
                                 } else {
                                     MessageActivity.addMessage(name, msg);
                                 }
@@ -225,16 +228,14 @@ public class Receiver implements Runnable {
                         updatePeerList();
                     }
                 } else {
-                    // otherwise forward it if you're not the recipient
-                    int ttl = p.getTtl();
-                    // Have a ttl so that they don't bounce around forever
-                    ttl--;
-                    if (ttl > 0) {
-                        Sender.queuePacket(p);
-                        p.setTtl(ttl);
+                    int TTL = packet.getTTL(); // forward it if you're not the recipient
+                    TTL--; // decrease the TTL to prevent packets sticking around forever
+                    if (TTL > 0) {
+                        Sender.queuePacket(packet);
+                        packet.setTTL(TTL);
                     }
                 }
             }
-        }
+        } while (true);
     }
 }

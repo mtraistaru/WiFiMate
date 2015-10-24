@@ -1,61 +1,63 @@
 package com.ancestor.wifimate.router;
 
+import android.util.Log;
+
 import com.ancestor.wifimate.config.Configuration;
-import com.ancestor.wifimate.router.tcp.TcpSender;
+import com.ancestor.wifimate.router.tcp.TCPSender;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * Responsible for sending all packets that appear in the queue
+ * The main sender of the application for all the packets that appear in the queue.
  *
- * @author Matthew Vertescher
+ * Created by Mihai.Traistaru on 23.10.2015
  */
 public class Sender implements Runnable {
 
-    /**
-     * Queue for packets to send
-     */
-    private static ConcurrentLinkedQueue<Packet> ccl;
+    private static final String TAG = Sender.class.getName();
 
     /**
-     * Constructor
+     * Queue for the packets to be sent.
+     */
+    private static ConcurrentLinkedQueue<Packet> packetConcurrentLinkedQueue;
+
+    /**
+     * Constructor for the sender object.
      */
     public Sender() {
-        if (ccl == null)
-            ccl = new ConcurrentLinkedQueue<Packet>();
+        if (packetConcurrentLinkedQueue == null) {
+            packetConcurrentLinkedQueue = new ConcurrentLinkedQueue<>();
+        }
     }
 
     /**
-     * Enqueue a packet to send
+     * Enqueue a packet to be sent.
      *
-     * @param p
-     * @return
+     * @param packet the packet to be sent.
+     * @return true if the packet has been successfully added to the queue.
      */
-    public static boolean queuePacket(Packet p) {
-        if (ccl == null)
-            ccl = new ConcurrentLinkedQueue<Packet>();
-        return ccl.add(p);
+    public static boolean queuePacket(Packet packet) {
+        if (packetConcurrentLinkedQueue == null) {
+            packetConcurrentLinkedQueue = new ConcurrentLinkedQueue<>();
+        }
+        return packetConcurrentLinkedQueue.add(packet);
     }
 
     @Override
     public void run() {
-        TcpSender packetSender = new TcpSender();
-
-        while (true) {
-            //Sleep to give up CPU cycles
-            while (ccl.isEmpty()) {
+        TCPSender packetSender = new TCPSender();
+        do {
+            while (packetConcurrentLinkedQueue.isEmpty()) {
                 try {
                     Thread.sleep(2000);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    Log.e(TAG, "couldn't sleep TCPSender thread", e);
                 }
             }
-
-            Packet p = ccl.remove();
-            String ip = MeshNetworkManager.getIPForClient(p.getMac());
+            Packet p = packetConcurrentLinkedQueue.remove();
+            String ip = MeshNetworkRouter.getPeerIPAddress(p.getMacAddress());
             packetSender.sendPacket(ip, Configuration.RECEIVE_PORT, p);
 
-        }
+        } while (true);
     }
-
 }

@@ -1,5 +1,7 @@
 package com.ancestor.wifimate.router.tcp;
 
+import android.util.Log;
+
 import com.ancestor.wifimate.router.Packet;
 
 import java.io.ByteArrayOutputStream;
@@ -10,34 +12,30 @@ import java.net.Socket;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * Receives packets on a server socket threads and enqueues them to a receiver runner
- *
- * @author Matthew Vertescher
+ * Receives packets on a server socket thread and enqueues them to a receiver runner.
+ * Created by Mihai.Traistaru on 23.10.2015
  */
-public class TcpReciever implements Runnable {
+public class TCPReceiver implements Runnable {
+
+    private static final String TAG = TCPReceiver.class.getName();
 
     private ServerSocket serverSocket;
     private ConcurrentLinkedQueue<Packet> packetQueue;
 
     /**
-     * Constructor with the queue
-     *
-     * @param port
-     * @param queue
+     * Constructor for the TCPReceiver.
+     * @param port the port of the server
+     * @param queue the queue of the receiver
      */
-    public TcpReciever(int port, ConcurrentLinkedQueue<Packet> queue) {
+    public TCPReceiver(int port, ConcurrentLinkedQueue<Packet> queue) {
         try {
             this.serverSocket = new ServerSocket(port);
         } catch (IOException e) {
-            System.err.println("Server socket on port " + port + " could not be created. ");
-            e.printStackTrace();
+            Log.e(TAG, "Server socket on port " + port + " could not be created. ", e);
         }
         this.packetQueue = queue;
     }
 
-    /**
-     * Thread runner
-     */
     @Override
     public void run() {
         Socket socket;
@@ -45,25 +43,24 @@ public class TcpReciever implements Runnable {
             try {
                 socket = this.serverSocket.accept();
                 InputStream in = socket.getInputStream();
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
                 byte[] buf = new byte[1024];
                 while (true) {
                     int n = in.read(buf);
                     if (n < 0)
                         break;
-                    baos.write(buf, 0, n);
+                    byteArrayOutputStream.write(buf, 0, n);
                 }
 
-                byte trimmedBytes[] = baos.toByteArray();
+                byte trimmedBytes[] = byteArrayOutputStream.toByteArray();
                 Packet p = Packet.deserialize(trimmedBytes);
                 p.setSenderIP(socket.getInetAddress().getHostAddress());
                 this.packetQueue.add(p);
                 socket.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                Log.e(TAG, "error while running TCPReceiver thread", e);
             }
         }
     }
-
 }

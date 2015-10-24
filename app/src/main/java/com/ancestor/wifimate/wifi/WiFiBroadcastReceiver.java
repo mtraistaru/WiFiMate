@@ -12,8 +12,8 @@ import android.widget.Toast;
 
 import com.ancestor.wifimate.activity.WiFiDirectActivity;
 import com.ancestor.wifimate.config.Configuration;
-import com.ancestor.wifimate.router.AllEncompasingP2PClient;
-import com.ancestor.wifimate.router.MeshNetworkManager;
+import com.ancestor.wifimate.router.MeshNetworkRouter;
+import com.ancestor.wifimate.router.Peer;
 import com.ancestor.wifimate.router.Receiver;
 import com.ancestor.wifimate.router.Sender;
 
@@ -24,25 +24,26 @@ import java.nio.ByteOrder;
 import java.util.List;
 
 /**
- * Used for bridging or legacy wifi connections
- *
- * @author Matthew Vertescher
+ * Used for bridging or legacy wifi connections.
+ * <p>
+ * Created by Mihai.Traistaru on 23.10.2015
  */
 public class WiFiBroadcastReceiver extends BroadcastReceiver {
 
+    private static final String TAG = WiFiBroadcastReceiver.class.getName();
     private WifiManager wifiManager;
     private WiFiDirectActivity activity;
-    private boolean isWifiConnected;
+    private boolean wifiConnected;
 
-    public WiFiBroadcastReceiver(WifiManager wifiManager, WiFiDirectActivity activity, boolean isWifiConnected) {
+    public WiFiBroadcastReceiver(WifiManager wifiManager, WiFiDirectActivity activity, boolean wifiConnected) {
         super();
         this.wifiManager = wifiManager;
         this.activity = activity;
-        this.isWifiConnected = isWifiConnected;
+        this.wifiConnected = wifiConnected;
     }
 
     /**
-     * This method call when number of wifi connections changed
+     * Called when the number of wifi connections has changed.
      */
     public void onReceive(Context context, Intent intent) {
 
@@ -50,96 +51,92 @@ public class WiFiBroadcastReceiver extends BroadcastReceiver {
 
         if (WifiManager.SCAN_RESULTS_AVAILABLE_ACTION.equals(action)) {
 
-            String wfdSsid = null;
+            String wifiDirectSSID = null;
 
             StringBuilder sb = new StringBuilder();
             List<ScanResult> wifiList = this.wifiManager.getScanResults();
             sb.append("\n        Number Of Wifi connections :").append(wifiList.size()).append("\n\n");
 
             for (int i = 0; i < wifiList.size(); i++) {
-
                 if (wifiList.get(i).SSID.contains("DIRECT")) {
-                    wfdSsid = wifiList.get(i).SSID;
+                    wifiDirectSSID = wifiList.get(i).SSID;
                 }
-
                 sb.append(Integer.valueOf(i + 1)).append(". ");
                 sb.append((wifiList.get(i)).toString());
                 sb.append("\n\n");
             }
 
-            if (wfdSsid != null && !this.isWifiConnected) {
-                // this.activity.displayConnectDialog(wfdSsid);
-            } else {
-                Toast.makeText(activity, "Found no WiFi direct network to connect to using wlan0", Toast.LENGTH_LONG)
-                        .show();
+            if (wifiDirectSSID == null || this.wifiConnected) {
+                Toast.makeText(activity, "Found no WiFi direct network to connect to", Toast.LENGTH_LONG).show();
             }
         } else if (WifiManager.WIFI_STATE_CHANGED_ACTION.equals(action)) {
-            Log.d("WiFiBroadcastReceiver", "WIFI_STATE_CHANGED_ACTION");
+            Log.d(TAG, "WIFI_STATE_CHANGED_ACTION");
             int iTemp = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, WifiManager.WIFI_STATE_UNKNOWN);
             checkState(iTemp);
         } else if (WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(action)) {
-            Log.d("WiFiBroadcastReceiver", "NETWORK_STATE_CHANGED_ACTION");
+            Log.d(TAG, "NETWORK_STATE_CHANGED_ACTION");
             NetworkInfo netInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
             DetailedState state = netInfo.getDetailedState();
-            Log.d("WiFiBroadcastReceiver", "	state = " + state.name());
-            changeState(state, context);
+            Log.d(TAG, "	state = " + state.name());
+            changeState(state);
         }
     }
 
-    private void changeState(DetailedState aState, Context context) {
-        if (aState == DetailedState.SCANNING) {
-            Log.d("WiFiBroadcastReceiver", "SCANNING");
-        } else if (aState == DetailedState.CONNECTING) {
-            Log.d("WiFiBroadcastReceiver", "CONNECTING");
-        } else if (aState == DetailedState.OBTAINING_IPADDR) {
-            Log.d("WiFiBroadcastReceiver", "OBTAINING_IPADDR");
-        } else if (aState == DetailedState.CONNECTED) {
-            Log.d("WiFiBroadcastReceiver", "CONNECTED");
-            Log.d("WiFiBroadcastReceiver", "	bssid=" + wifiManager.getConnectionInfo().getBSSID());
-            Log.d("WiFiBroadcastReceiver", "	ip=" + this.parseIpAddress(wifiManager.getConnectionInfo().getIpAddress()));
-            Log.d("WiFiBroadcastReceiver", "	ssid=" + wifiManager.getConnectionInfo().getSSID());
-            Log.d("WiFiBroadcastReceiver", "	dhcpGtw=" + this.parseIpAddress(wifiManager.getDhcpInfo().gateway));
-            Log.d("WiFiBroadcastReceiver", "	MAC=" + wifiManager.getConnectionInfo().getMacAddress());
-            Log.d("WiFiBroadcastReceiver", "	dhcpServer=" + this.parseIpAddress(wifiManager.getDhcpInfo().serverAddress));
-            Log.d("WiFiBroadcastReceiver", "	netmask=" + this.parseIpAddress(wifiManager.getDhcpInfo().netmask));
+    private void changeState(DetailedState detailedState) {
+        if (detailedState == DetailedState.SCANNING) {
+            Log.d(TAG, "SCANNING");
+        } else if (detailedState == DetailedState.CONNECTING) {
+            Log.d(TAG, "CONNECTING");
+        } else if (detailedState == DetailedState.OBTAINING_IPADDR) {
+            Log.d(TAG, "OBTAINING IP ADDRESS");
+        } else if (detailedState == DetailedState.CONNECTED) {
+            Log.d(TAG, "CONNECTED");
+            Log.d(TAG, "	basic ssid =" + wifiManager.getConnectionInfo().getBSSID());
+            Log.d(TAG, "	ip address =" + this.parseIpAddress(wifiManager.getConnectionInfo().getIpAddress()));
+            Log.d(TAG, "	ssid =" + wifiManager.getConnectionInfo().getSSID());
+            Log.d(TAG, "	dhcp gateway =" + this.parseIpAddress(wifiManager.getDhcpInfo().gateway));
+            Log.d(TAG, "	MAC address =" + wifiManager.getConnectionInfo().getMacAddress());
+            Log.d(TAG, "	dhcp server=" + this.parseIpAddress(wifiManager.getDhcpInfo().serverAddress));
+            Log.d(TAG, "	dhcp netmask =" + this.parseIpAddress(wifiManager.getDhcpInfo().netmask));
 
-            MeshNetworkManager.setSelf(new AllEncompasingP2PClient(
-                    wifiManager.getConnectionInfo().getMacAddress(),
-                    Configuration.GO_IP,
-                    wifiManager.getConnectionInfo().getMacAddress(),
-                    wifiManager.getConnectionInfo().getMacAddress()));
+            MeshNetworkRouter.setSelf(new Peer(
+                            wifiManager.getConnectionInfo().getMacAddress(),
+                            Configuration.GROUP_OWNER_IP_ADDRESS,
+                            wifiManager.getConnectionInfo().getMacAddress(),
+                            wifiManager.getConnectionInfo().getMacAddress()
+                    )
+            );
 
             if (!Receiver.running) {
-                Receiver r = new Receiver(this.activity);
+                Receiver r = new Receiver(activity);
                 new Thread(r).start();
                 Sender s = new Sender();
                 new Thread(s).start();
             }
-        } else if (aState == DetailedState.DISCONNECTING) {
-            Log.d("WiFiBroadcastReceiver", "DISCONNECTING");
-        } else if (aState == DetailedState.DISCONNECTED) {
-            Log.d("WiFiBroadcastReceiver", "DISCONNECTED");
-        } else if (aState == DetailedState.FAILED) {
+        } else if (detailedState == DetailedState.DISCONNECTING) {
+            Log.d(TAG, "DISCONNECTING");
+        } else if (detailedState == DetailedState.DISCONNECTED) {
+            Log.d(TAG, "DISCONNECTED");
+        } else if (detailedState == DetailedState.FAILED) {
             // TODO
         }
     }
 
-    public void checkState(int aInt) {
-        if (aInt == WifiManager.WIFI_STATE_ENABLING) {
-            Log.d("WiFiBroadcastReceiver", "WIFI_STATE_ENABLING");
-        } else if (aInt == WifiManager.WIFI_STATE_ENABLED) {
-            Log.d("WiFiBroadcastReceiver", "WIFI_STATE_ENABLED");
-        } else if (aInt == WifiManager.WIFI_STATE_DISABLING) {
-            Log.d("WiFiBroadcastReceiver", "WIFI_STATE_DISABLING");
-        } else if (aInt == WifiManager.WIFI_STATE_DISABLED) {
-            Log.d("WiFiBroadcastReceiver", "WIFI_STATE_DISABLED");
+    public void checkState(int state) {
+        if (state == WifiManager.WIFI_STATE_ENABLING) {
+            Log.d(TAG, "WIFI_STATE_ENABLING");
+        } else if (state == WifiManager.WIFI_STATE_ENABLED) {
+            Log.d(TAG, "WIFI_STATE_ENABLED");
+        } else if (state == WifiManager.WIFI_STATE_DISABLING) {
+            Log.d(TAG, "WIFI_STATE_DISABLING");
+        } else if (state == WifiManager.WIFI_STATE_DISABLED) {
+            Log.d(TAG, "WIFI_STATE_DISABLED");
         }
     }
 
     private String parseIpAddress(int ipAddress) {
 
-        // Convert little-endian to big-endian if needed
-        if (ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN)) {
+        if (ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN)) { // convert little-endian to big-endian if needed
             ipAddress = Integer.reverseBytes(ipAddress);
         }
 
@@ -149,7 +146,7 @@ public class WiFiBroadcastReceiver extends BroadcastReceiver {
         try {
             ipAddressString = InetAddress.getByAddress(ipByteArray).getHostAddress();
         } catch (UnknownHostException ex) {
-            Log.e("WIFIIP", "Unable to get host address.");
+            Log.e(TAG, "Unable to get the host address.");
             ipAddressString = null;
         }
         return ipAddressString;

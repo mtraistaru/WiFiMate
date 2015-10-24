@@ -15,8 +15,13 @@ import android.view.View;
 
 import com.ancestor.wifimate.R;
 
-public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener {
+/**
+ * Main activity of the application.
+ * Created by Mihai.Traistaru on 23.10.2015
+ */
+public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+
+    private static final String TAG = MainActivity.class.getName();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,7 +40,12 @@ public class MainActivity extends AppCompatActivity
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+                this,
+                drawer,
+                toolbar,
+                R.string.navigation_drawer_open,
+                R.string.navigation_drawer_close
+        );
         drawer.setDrawerListener(toggle);
         toggle.syncState();
 
@@ -84,15 +94,15 @@ public class MainActivity extends AppCompatActivity
         if (id == R.id.nav_camara) {
             // Handle the camera action
         } else if (id == R.id.nav_gallery) {
-
+            // TODO
         } else if (id == R.id.nav_slideshow) {
-
+            // TODO
         } else if (id == R.id.nav_manage) {
-
+            // TODO
         } else if (id == R.id.nav_share) {
-
+            // TODO
         } else if (id == R.id.nav_send) {
-
+            // TODO
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);

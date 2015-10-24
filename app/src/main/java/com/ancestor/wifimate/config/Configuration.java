@@ -1,25 +1,23 @@
 package com.ancestor.wifimate.config;
 
 /**
- * Contains configuration settings related to the WiFi Direct implementation
- *
- * @author Peter Henderson
+ * Contains the configuration settings related to the Wi-Fi Direct implementation
+ * Created by Mihai.Traistaru on 23.10.2015
  */
-public class Configuration {
+public interface Configuration {
+
     /**
      * The default ports that all clients receive at
      */
-    public static final int RECEIVE_PORT = 8888;
+    int RECEIVE_PORT = 9999;
 
     /**
-     * The default GO IP address for initial connections
+     * The default Group Owner IP address for the initial connections
      */
-    public static final String GO_IP = "192.168.49.1";
+    String GROUP_OWNER_IP_ADDRESS = "192.168.50.1";
 
     /**
-     * This only works on certain devices where multiple simultaneous
-     * connections are available (infrastructure & ad-hoc) (multiroll)
+     * This only works on certain devices where multiple simultaneous connections are available (infrastructure & ad-hoc)
      */
-    public static final boolean isDeviceBridgingEnabled = false;
-
+    boolean isDeviceBridgingEnabled = false;
 }

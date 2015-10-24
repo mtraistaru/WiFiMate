@@ -17,56 +17,43 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.ancestor.wifimate.R;
-import com.ancestor.wifimate.activity.WiFiDirectActivity;
-import com.ancestor.wifimate.router.AllEncompasingP2PClient;
-import com.ancestor.wifimate.router.MeshNetworkManager;
+import com.ancestor.wifimate.router.MeshNetworkRouter;
 import com.ancestor.wifimate.router.Packet;
+import com.ancestor.wifimate.router.Peer;
 import com.ancestor.wifimate.router.Sender;
 import com.ancestor.wifimate.wifi.WiFiDirectBroadcastReceiver;
 
 /**
- * A fragment that manages a particular peer and allows interaction with device
- * i.e. setting up network connection and transferring data.
- * <p>
+ * A fragment that manages a particular peer and allows interaction with device i.e. setting up network connection and transferring data.
  * NOTE: much of this was taken from the Android example on P2P networking
+ * Created by Mihai.Traistaru on 23.10.2015
  */
 public class DeviceDetailFragment extends Fragment implements ConnectionInfoListener {
 
+    private static final String TAG = DeviceDetailFragment.class.getName();
+
     private static View mContentView = null;
-    ProgressDialog progressDialog = null;
+    private ProgressDialog progressDialog = null;
     private WifiP2pDevice device;
 
     /**
-     * Update who is in the chat from the routing table
+     * Update who is in the chat from the routing table.
      */
     public static void updateGroupChatMembersMessage() {
         TextView view = (TextView) mContentView.findViewById(R.id.device_address);
         if (view != null) {
             String s = "Currently in the network chatting: \n";
-            for (AllEncompasingP2PClient c : MeshNetworkManager.routingTable.values()) {
-                s += c.getMac() + "\n";
+            for (Peer c : MeshNetworkRouter.routingTable.values()) {
+                s += c.getMacAddress() + "\n";
             }
             view.setText(s);
         }
     }
 
-    /**
-     * Once the activity is created make sure to call the super constructor
-     */
-    @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-    }
-
-    /**
-     * Handle the view setup and callbacks
-     */
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-
         mContentView = inflater.inflate(R.layout.device_detail, null);
         mContentView.findViewById(R.id.btn_connect).setOnClickListener(new View.OnClickListener() {
-
             @Override
             public void onClick(View v) {
                 WifiP2pConfig config = new WifiP2pConfig();
@@ -75,15 +62,12 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 if (progressDialog != null && progressDialog.isShowing()) {
                     progressDialog.dismiss();
                 }
-                progressDialog = ProgressDialog.show(getActivity(), "Press back to cancel", "Connecting to :"
-                        + device.deviceAddress, true, true);
+                progressDialog = ProgressDialog.show(getActivity(), "Press back to cancel", "Connecting to :" + device.deviceAddress, true, true);
                 ((DeviceListFragment.DeviceActionListener) getActivity()).connect(config);
-
             }
         });
 
         mContentView.findViewById(R.id.btn_disconnect).setOnClickListener(new View.OnClickListener() {
-
             @Override
             public void onClick(View v) {
                 ((DeviceListFragment.DeviceActionListener) getActivity()).disconnect();
@@ -93,9 +77,6 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         return mContentView;
     }
 
-    /**
-     * This is mostly for debugging
-     */
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
 
@@ -104,7 +85,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         Uri uri = data.getData();
         TextView statusText = (TextView) mContentView.findViewById(R.id.status_text);
         statusText.setText("Sending: " + uri);
-        Log.d(WiFiDirectActivity.TAG, "Intent----------- " + uri);
+        Log.d(TAG, "Intent----------- " + uri);
     }
 
     /**
@@ -118,18 +99,15 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         if (this.getView() != null) {
             this.getView().setVisibility(View.VISIBLE);
         }
-
         if (!info.isGroupOwner) {
             Sender.queuePacket(new Packet(Packet.TYPE.HELLO, new byte[0], null, WiFiDirectBroadcastReceiver.MAC));
         }
-
         // hide the connect button
         mContentView.findViewById(R.id.btn_connect).setVisibility(View.GONE);
     }
 
     /**
      * Updates the UI with device data
-     *
      * @param device the device to be displayed
      */
     public void showDetails(WifiP2pDevice device) {
@@ -139,8 +117,8 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         }
         TextView view = (TextView) mContentView.findViewById(R.id.device_address);
         String s = "Currently in the network chatting: \n";
-        for (AllEncompasingP2PClient c : MeshNetworkManager.routingTable.values()) {
-            s += c.getMac() + "\n";
+        for (Peer c : MeshNetworkRouter.routingTable.values()) {
+            s += c.getMacAddress() + "\n";
         }
         view.setText(s);
     }
@@ -162,5 +140,4 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             this.getView().setVisibility(View.GONE);
         }
     }
-
 }

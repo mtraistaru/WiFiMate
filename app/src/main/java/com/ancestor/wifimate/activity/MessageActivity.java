@@ -8,23 +8,26 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.ancestor.wifimate.R;
-import com.ancestor.wifimate.router.AllEncompasingP2PClient;
-import com.ancestor.wifimate.router.MeshNetworkManager;
+import com.ancestor.wifimate.router.MeshNetworkRouter;
 import com.ancestor.wifimate.router.Packet;
+import com.ancestor.wifimate.router.Peer;
 import com.ancestor.wifimate.router.Sender;
 import com.ancestor.wifimate.wifi.WiFiDirectBroadcastReceiver;
 
 /**
  * Activity for the group chat view
- *
- * @author Peter Henderson
+ * Created by Mihai.Traistaru on 23.10.2015
  */
 public class MessageActivity extends Activity {
+
+    private static final String TAG = MessageActivity.class.getName();
 
     private static TextView messageView;
 
     /**
      * Add a message to the view
+     * @param from the sender of the message
+     * @param text the text sent
      */
     public static void addMessage(String from, String text) {
 
@@ -37,9 +40,6 @@ public class MessageActivity extends Activity {
             messageView.scrollTo(0, 0);
     }
 
-    /**
-     * Add appropriate listeners on creation
-     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -59,18 +59,17 @@ public class MessageActivity extends Activity {
                 message.setText("");
 
                 // Send to other clients as a group chat message
-                for (AllEncompasingP2PClient c : MeshNetworkManager.routingTable.values()) {
-                    if (c.getMac().equals(MeshNetworkManager.getSelf().getMac()))
+                for (Peer c : MeshNetworkRouter.routingTable.values()) {
+                    if (c.getMacAddress().equals(MeshNetworkRouter.getSelf().getMacAddress())) {
                         continue;
+                    }
                     Sender.queuePacket(new Packet(
                             Packet.TYPE.MESSAGE,
                             msgStr.getBytes(),
-                            c.getMac(),
+                            c.getMacAddress(),
                             WiFiDirectBroadcastReceiver.MAC));
                 }
-
             }
         });
     }
-
 }

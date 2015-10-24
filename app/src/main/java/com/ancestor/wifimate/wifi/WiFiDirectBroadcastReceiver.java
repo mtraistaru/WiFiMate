@@ -33,15 +33,19 @@ import com.ancestor.wifimate.activity.WiFiDirectActivity;
 import com.ancestor.wifimate.config.Configuration;
 import com.ancestor.wifimate.fragment.DeviceDetailFragment;
 import com.ancestor.wifimate.fragment.DeviceListFragment;
-import com.ancestor.wifimate.router.AllEncompasingP2PClient;
-import com.ancestor.wifimate.router.MeshNetworkManager;
+import com.ancestor.wifimate.router.MeshNetworkRouter;
+import com.ancestor.wifimate.router.Peer;
 import com.ancestor.wifimate.router.Receiver;
 import com.ancestor.wifimate.router.Sender;
 
 /**
  * A BroadcastReceiver that notifies of important wifi p2p events.
+ *
+ * Created by Mihai.Traistaru on 23.10.2015
  */
 public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
+
+    private static final String TAG = WiFiDirectBroadcastReceiver.class.getName();
 
     public static String MAC;
     private WifiP2pManager manager;
@@ -49,6 +53,8 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
     private WiFiDirectActivity activity;
 
     /**
+     * Constructor for a WiFiDirectBroadcastReceiver object
+     *
      * @param manager  WifiP2pManager system service
      * @param channel  Wifi p2p channel
      * @param activity activity associated with the receiver
@@ -61,80 +67,62 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
     }
 
     /**
-     * State transitions based on connection and state information, callback based on P2P library
+     * State transitions based on connection and state information, callback based on P2P library.
      */
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
-
         if (WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION.equals(action)) {
-
-            // UI update to indicate wifi p2p status.
-            int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
-
+            int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1); // UI update to indicate wifi p2p status.
             if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-                // Wifi Direct mode is enabled
-                activity.setIsWifiP2pEnabled(true);
-
+                activity.setWifiP2PEnabled(true);
                 manager.createGroup(channel, new ActionListener() {
-
                     @Override
                     public void onSuccess() {
-                        Log.d(WiFiDirectActivity.TAG, "P2P Group created");
+                        Log.d(TAG, "P2P Group created");
                     }
 
                     @Override
                     public void onFailure(int reason) {
-                        Log.d(WiFiDirectActivity.TAG, "P2P Group failed");
+                        Log.d(TAG, "P2P Group failed");
                     }
                 });
             } else {
-                activity.setIsWifiP2pEnabled(false);
+                activity.setWifiP2PEnabled(false);
                 activity.resetData();
             }
-
-            Log.d(WiFiDirectActivity.TAG, "P2PACTION : WIFI_P2P_STATE_CHANGED_ACTION state = " + state);
+            Log.d(TAG, "P2P ACTION : WIFI_P2P_STATE_CHANGED_ACTION state = " + state);
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
             // request available peers from the wifi p2p manager. This is an
             // asynchronous call and the calling activity is notified with a
             // callback on PeerListListener.onPeersAvailable()
             if (manager != null) {
-                manager.requestPeers(channel,
-                        (PeerListListener) activity.getFragmentManager().findFragmentById(R.id.frag_list));
+                manager.requestPeers(channel, (PeerListListener) activity.getFragmentManager().findFragmentById(R.id.frag_list));
             }
-            Log.d(WiFiDirectActivity.TAG, "P2PACTION : WIFI_P2P_PEERS_CHANGED_ACTION");
+            Log.d(TAG, "P2P ACTION : WIFI_P2P_PEERS_CHANGED_ACTION");
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
             if (manager == null) {
                 return;
             }
-
             NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
-
-            if (networkInfo.isConnected()) {
-                // we are connected with the other device, request connection
-                // info to find group owner IP
-                DeviceDetailFragment fragment = (DeviceDetailFragment) activity.getFragmentManager().findFragmentById(
-                        R.id.frag_detail);
+            if (networkInfo.isConnected()) {// we are connected with the other device, request connection info to find group owner IP
+                DeviceDetailFragment fragment = (DeviceDetailFragment) activity.getFragmentManager().findFragmentById(R.id.frag_detail);
                 manager.requestConnectionInfo(channel, fragment);
-            } else {
-                // It's a disconnect
-                Log.d(WiFiDirectActivity.TAG, "P2PACTION : WIFI_P2P_CONNECTION_CHANGED_ACTION -- DISCONNECT");
+            } else { // It's a disconnect
+                Log.d(TAG, "P2P ACTION : WIFI_P2P_CONNECTION_CHANGED_ACTION -- DISCONNECT");
                 activity.resetData();
             }
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
-            DeviceListFragment fragment = (DeviceListFragment) activity.getFragmentManager().findFragmentById(
-                    R.id.frag_list);
+            DeviceListFragment fragment = (DeviceListFragment) activity.getFragmentManager().findFragmentById(R.id.frag_list);
             fragment.updateThisDevice((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE));
-
             MAC = ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceAddress;
+            MeshNetworkRouter.setSelf(new Peer(
+                            ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceAddress, Configuration.GROUP_OWNER_IP_ADDRESS,
+                            ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceName,
+                            ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceAddress)
+            ); // set yourself on connection
 
-            //Set yourself on connection
-            MeshNetworkManager.setSelf(new AllEncompasingP2PClient(((WifiP2pDevice) intent
-                    .getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceAddress, Configuration.GO_IP,
-                    ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceName,
-                    ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceAddress));
-
-            //Launch receiver and sender once connected to someone
+            // launch receiver and sender once connected to someone
             if (!Receiver.running) {
                 Receiver r = new Receiver(this.activity);
                 new Thread(r).start();
@@ -143,17 +131,18 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
             }
 
             manager.requestGroupInfo(channel, new WifiP2pManager.GroupInfoListener() {
-                @Override
-                public void onGroupInfoAvailable(WifiP2pGroup group) {
-                    if (group != null) {
-                        // clients require these
-                        String ssid = group.getNetworkName();
-                        String passphrase = group.getPassphrase();
-                        Log.d(WiFiDirectActivity.TAG, "GROUP INFO AVALABLE");
-                        Log.d(WiFiDirectActivity.TAG, " SSID : " + ssid + "\n Passphrase : " + passphrase);
+                        @Override
+                        public void onGroupInfoAvailable(WifiP2pGroup group) {
+                            if (group != null) {
+                                // clients require these
+                                String ssid = group.getNetworkName();
+                                String passphrase = group.getPassphrase();
+                                Log.d(TAG, "GROUP INFO AVAILABLE");
+                                Log.d(TAG, " SSID : " + ssid + "\n Passphrase : " + passphrase);
+                            }
+                        }
                     }
-                }
-            });
+            );
         }
     }
 }
