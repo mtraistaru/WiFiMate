@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ancestor.wifimate.wifi;
+package com.ancestor.wifimate.receiver;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -28,47 +28,42 @@ import android.net.wifi.p2p.WifiP2pManager.Channel;
 import android.net.wifi.p2p.WifiP2pManager.PeerListListener;
 import android.util.Log;
 
+import com.ancestor.wifimate.Configuration;
 import com.ancestor.wifimate.R;
+import com.ancestor.wifimate.WiFiMateApp;
 import com.ancestor.wifimate.activity.WiFiDirectActivity;
-import com.ancestor.wifimate.config.Configuration;
 import com.ancestor.wifimate.fragment.DeviceDetailFragment;
 import com.ancestor.wifimate.fragment.DeviceListFragment;
-import com.ancestor.wifimate.router.MeshNetworkRouter;
-import com.ancestor.wifimate.router.Peer;
-import com.ancestor.wifimate.router.Receiver;
-import com.ancestor.wifimate.router.Sender;
+import com.ancestor.wifimate.network.Router;
+import com.ancestor.wifimate.peer.CustomWiFiP2PDevice;
+import com.ancestor.wifimate.peer.Receiver;
+import com.ancestor.wifimate.peer.Sender;
+
+import javax.inject.Inject;
 
 /**
- * A BroadcastReceiver that notifies of important wifi p2p events.
- *
  * Created by Mihai.Traistaru on 23.10.2015
  */
 public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
 
     private static final String TAG = WiFiDirectBroadcastReceiver.class.getName();
 
-    public static String MAC;
+    public static String macAddress;
     private WifiP2pManager manager;
     private Channel channel;
     private WiFiDirectActivity activity;
 
-    /**
-     * Constructor for a WiFiDirectBroadcastReceiver object
-     *
-     * @param manager  WifiP2pManager system service
-     * @param channel  Wifi p2p channel
-     * @param activity activity associated with the receiver
-     */
+    @Inject
+    Router router;
+
     public WiFiDirectBroadcastReceiver(WifiP2pManager manager, Channel channel, WiFiDirectActivity activity) {
         super();
         this.manager = manager;
         this.channel = channel;
         this.activity = activity;
+        WiFiMateApp.getApp(activity).getWiFiMateComponent().inject(this);
     }
 
-    /**
-     * State transitions based on connection and state information, callback based on P2P library.
-     */
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
@@ -93,9 +88,6 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
             }
             Log.d(TAG, "P2P ACTION : WIFI_P2P_STATE_CHANGED_ACTION state = " + state);
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
-            // request available peers from the wifi p2p manager. This is an
-            // asynchronous call and the calling activity is notified with a
-            // callback on PeerListListener.onPeersAvailable()
             if (manager != null) {
                 manager.requestPeers(channel, (PeerListListener) activity.getFragmentManager().findFragmentById(R.id.frag_list));
             }
@@ -115,21 +107,18 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
             DeviceListFragment fragment = (DeviceListFragment) activity.getFragmentManager().findFragmentById(R.id.frag_list);
             fragment.updateThisDevice((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE));
-            MAC = ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceAddress;
-            MeshNetworkRouter.setSelf(new Peer(
-                            ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceAddress, Configuration.GROUP_OWNER_IP_ADDRESS,
-                            ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceName,
-                            ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceAddress)
-            ); // set yourself on connection
-
-            // launch receiver and sender once connected to someone
+            macAddress = ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceAddress;
+            router.setCustomWiFiP2PDevice(new CustomWiFiP2PDevice(
+                    ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceAddress, Configuration.GROUP_OWNER_IP_ADDRESS,
+                    ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceName,
+                    ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceAddress)
+            );
             if (!Receiver.running) {
-                Receiver r = new Receiver(this.activity);
+                Receiver r = new Receiver(activity);
                 new Thread(r).start();
-                Sender s = new Sender();
+                Sender s = new Sender(activity);
                 new Thread(s).start();
             }
-
             manager.requestGroupInfo(channel, new WifiP2pManager.GroupInfoListener() {
                         @Override
                         public void onGroupInfoAvailable(WifiP2pGroup group) {

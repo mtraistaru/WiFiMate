@@ -23,20 +23,14 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.ancestor.wifimate.Configuration;
 import com.ancestor.wifimate.R;
-import com.ancestor.wifimate.config.Configuration;
 import com.ancestor.wifimate.fragment.DeviceDetailFragment;
 import com.ancestor.wifimate.fragment.DeviceListFragment;
-import com.ancestor.wifimate.wifi.WiFiBroadcastReceiver;
-import com.ancestor.wifimate.wifi.WiFiDirectBroadcastReceiver;
+import com.ancestor.wifimate.receiver.WiFiBroadcastReceiver;
+import com.ancestor.wifimate.receiver.WiFiDirectBroadcastReceiver;
 
 /**
- * An activity that uses WiFi Direct APIs to discover and connect with available
- * devices. WiFi Direct APIs are asynchronous and rely on callback mechanism
- * using interfaces to notify the application of operation success or failure.
- * The application should also register a BroadcastReceiver for notification of
- * WiFi state related events.
- * Note: much of this is taken from the Wi-Fi P2P example
  * Created by Mihai.Traistaru on 23.10.2015
  */
 public class WiFiDirectActivity extends Activity implements ChannelListener, DeviceListFragment.DeviceActionListener {
@@ -53,10 +47,6 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
     private Channel channel;
     private BroadcastReceiver receiver = null;
 
-    /**
-     * Setter for the wifiP2PEnabled boolean.
-     * @param wifiP2PEnabled true if wifiP2P should be enabled
-     */
     public void setWifiP2PEnabled(boolean wifiP2PEnabled) {
         this.wifiP2PEnabled = wifiP2PEnabled;
     }
@@ -66,7 +56,6 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
-        // add necessary intent values to be matched.
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
@@ -76,31 +65,22 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
         channel = manager.initialize(this, getMainLooper(), null);
 
         if (Configuration.isDeviceBridgingEnabled) {
-            // Initiate wifi service manager
             wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
 
-            // Check for wifi status
             if (!wifiManager.isWifiEnabled()) {
-                // If wifi disabled then enable it
                 Toast.makeText(getApplicationContext(), "wifi is disabled..making it enabled", Toast.LENGTH_LONG).show();
                 wifiManager.setWifiEnabled(true);
             }
 
-            // wifi scanned value broadcast receiver
             boolean wifiConnected = false;
             receiverWifi = new WiFiBroadcastReceiver(wifiManager, this, wifiConnected);
 
-            // Register broadcast receiver
-            // Broadcast receiver will automatically call when the number of wifi connections changed
             wifiIntentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
             wifiIntentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
             wifiIntentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
 
             registerReceiver(receiverWifi, wifiIntentFilter);
 
-			/*
-             * This shouldn't be hard coded, but for our purposes we wanted to demonstrate bridging.
-			 */
             connectToAccessPoint("WIFIMATE-AP", "wifimate0123");
         }
 
@@ -128,9 +108,6 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
         isVisible = false;
     }
 
-    /**
-     * Remove all peers and clear all fields. This is called on BroadcastReceiver receiving a state change event.
-     */
     public void resetData() {
         DeviceListFragment fragmentList = (DeviceListFragment) getFragmentManager().findFragmentById(R.id.frag_list);
         DeviceDetailFragment fragmentDetails = (DeviceDetailFragment) getFragmentManager().findFragmentById(R.id.frag_detail);
@@ -154,8 +131,6 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
         switch (item.getItemId()) {
             case R.id.atn_direct_enable:
                 if (manager != null && channel != null) {
-                    // Since this is the system wireless settings activity, it's not going to send us a result.
-                    // We will be notified by WiFiDeviceBroadcastReceiver instead.
                     startActivity(new Intent(Settings.ACTION_WIRELESS_SETTINGS));
                 } else {
                     Log.e(TAG, "channel or manager is null");
@@ -163,7 +138,6 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
                 return true;
             case R.id.atn_direct_discover:
                 if (!wifiP2PEnabled) {
-                    // If p2p not enabled try to connect as a legacy device
                     wifiManager.startScan();
                     Toast.makeText(WiFiDirectActivity.this, R.string.p2p_off_warning, Toast.LENGTH_SHORT).show();
                     return true;
@@ -193,15 +167,11 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
         fragment.showDetails(device);
     }
 
-    /**
-     * Try to connect through a callback to a given device
-     */
     @Override
     public void connect(WifiP2pConfig config) {
         manager.connect(channel, config, new ActionListener() {
             @Override
             public void onSuccess() {
-                // WiFiDirectBroadcastReceiver will notify us. Ignore for now.
             }
 
             @Override
@@ -213,7 +183,6 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
 
     @Override
     public void disconnect() {
-        // TODO: again here it should also include the other wifi hotspot thing
         final DeviceDetailFragment fragment = (DeviceDetailFragment) getFragmentManager().findFragmentById(R.id.frag_detail);
         fragment.resetViews();
         manager.removeGroup(channel, new ActionListener() {
@@ -233,7 +202,6 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
 
     @Override
     public void onChannelDisconnected() {
-        // we will try once more
         if (manager != null && !retryChannel) {
             Toast.makeText(this, "Channel lost. Trying again", Toast.LENGTH_LONG).show();
             resetData();
@@ -246,10 +214,6 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
 
     @Override
     public void cancelDisconnect() {
-		/*
-         * A cancel abort request by user. Disconnect i.e. removeGroup if already connected.
-         * Else, request WifiP2pManager to abort the ongoing request
-		 */
         if (manager != null) {
             final DeviceListFragment fragment = (DeviceListFragment) getFragmentManager().findFragmentById(R.id.frag_list);
             if (fragment.getDevice() == null || fragment.getDevice().status == WifiP2pDevice.CONNECTED) {
@@ -282,7 +246,6 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
         wc.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
         wc.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
         wc.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
-        // connect to and enable the connection
         int netId = wifiManager.addNetwork(wc);
         wifiManager.enableNetwork(netId, true);
         wifiManager.setWifiEnabled(true);

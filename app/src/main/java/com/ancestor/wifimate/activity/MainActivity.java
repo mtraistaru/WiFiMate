@@ -14,18 +14,25 @@ import android.view.MenuItem;
 import android.view.View;
 
 import com.ancestor.wifimate.R;
+import com.ancestor.wifimate.WiFiMateApp;
+import com.squareup.otto.Bus;
+
+import javax.inject.Inject;
 
 /**
- * Main activity of the application.
  * Created by Mihai.Traistaru on 23.10.2015
  */
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     private static final String TAG = MainActivity.class.getName();
 
+    @Inject
+    Bus bus;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        WiFiMateApp.getApp(this).getWiFiMateComponent().inject(this);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -65,19 +72,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             return true;
         }
@@ -88,11 +89,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
         int id = item.getItemId();
 
         if (id == R.id.nav_camara) {
-            // Handle the camera action
         } else if (id == R.id.nav_gallery) {
             // TODO
         } else if (id == R.id.nav_slideshow) {

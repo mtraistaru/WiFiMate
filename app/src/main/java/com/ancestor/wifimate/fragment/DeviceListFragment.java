@@ -23,30 +23,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A ListFragment that displays available peers on discovery and requests the parent activity to handle user interaction events.
- * NOTE: much of this was taken from the example in the Android P2P networking library
  * Created by Mihai.Traistaru on 23.10.2015
  */
 public class DeviceListFragment extends ListFragment implements PeerListListener {
 
     private static final String TAG = DeviceListFragment.class.getName();
 
-    /**
-     * A list of Wi-Fi Direct enabled ppers
-     */
     private List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
     private WifiP2pDevice device;
     private ProgressDialog progressDialog = null;
     private View mContentView = null;
 
-    /**
-     * For a given device see if it's connected to a group, pending a connection, etc.
-     *
-     * @param deviceStatus the status of the device
-     * @return string representing the status of the device
-     */
     private static String getDeviceStatus(int deviceStatus) {
-        Log.d(TAG, "Peer status :" + deviceStatus);
+        Log.d(TAG, "CustomWiFiP2PDevice status :" + deviceStatus);
         switch (deviceStatus) {
             case WifiP2pDevice.AVAILABLE:
                 return "Available";
@@ -75,9 +64,6 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         return mContentView;
     }
 
-    /**
-     * @return this device
-     */
     public WifiP2pDevice getDevice() {
         return device;
     }
@@ -88,11 +74,6 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         ((DeviceActionListener) getActivity()).showDetails(device);
     }
 
-    /**
-     * Update UI for this device.
-     *
-     * @param device WifiP2PDevice object
-     */
     public void updateThisDevice(WifiP2pDevice device) {
         this.device = device;
         TextView view = (TextView) mContentView.findViewById(R.id.my_name);
@@ -101,10 +82,6 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         view.setText(getDeviceStatus(device.status));
     }
 
-    /**
-     * Callback for the asynchronous peer searching.
-     * @param peerList the list of the WifiP2PDevices
-     */
     @Override
     public void onPeersAvailable(WifiP2pDeviceList peerList) {
         if (progressDialog != null && progressDialog.isShowing()) {
@@ -118,17 +95,11 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         }
     }
 
-    /**
-     * Remove the peers.
-     */
     public void clearPeers() {
         peers.clear();
         ((WiFiPeerListAdapter) getListAdapter()).notifyDataSetChanged();
     }
 
-    /**
-     * Callback to bring up searching modal.
-     */
     public void onInitiateDiscovery() {
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
@@ -148,9 +119,6 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         );
     }
 
-    /**
-     * An interface holding the callbacks for the activity to listen to fragment interaction events.
-     */
     public interface DeviceActionListener {
 
         void showDetails(WifiP2pDevice device);
@@ -162,9 +130,6 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         void disconnect();
     }
 
-    /**
-     * Array adapter for the DeviceListFragment that maintains the WifiP2PDevice list.
-     */
     private class WiFiPeerListAdapter extends ArrayAdapter<WifiP2pDevice> {
 
         /**

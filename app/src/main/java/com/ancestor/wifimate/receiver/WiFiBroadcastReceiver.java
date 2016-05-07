@@ -1,4 +1,4 @@
-package com.ancestor.wifimate.wifi;
+package com.ancestor.wifimate.receiver;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -10,12 +10,13 @@ import android.net.wifi.WifiManager;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.ancestor.wifimate.Configuration;
+import com.ancestor.wifimate.WiFiMateApp;
 import com.ancestor.wifimate.activity.WiFiDirectActivity;
-import com.ancestor.wifimate.config.Configuration;
-import com.ancestor.wifimate.router.MeshNetworkRouter;
-import com.ancestor.wifimate.router.Peer;
-import com.ancestor.wifimate.router.Receiver;
-import com.ancestor.wifimate.router.Sender;
+import com.ancestor.wifimate.network.Router;
+import com.ancestor.wifimate.peer.CustomWiFiP2PDevice;
+import com.ancestor.wifimate.peer.Receiver;
+import com.ancestor.wifimate.peer.Sender;
 
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -23,9 +24,9 @@ import java.net.UnknownHostException;
 import java.nio.ByteOrder;
 import java.util.List;
 
+import javax.inject.Inject;
+
 /**
- * Used for bridging or legacy wifi connections.
- * <p>
  * Created by Mihai.Traistaru on 23.10.2015
  */
 public class WiFiBroadcastReceiver extends BroadcastReceiver {
@@ -35,28 +36,24 @@ public class WiFiBroadcastReceiver extends BroadcastReceiver {
     private WiFiDirectActivity activity;
     private boolean wifiConnected;
 
+    @Inject
+    Router router;
+
     public WiFiBroadcastReceiver(WifiManager wifiManager, WiFiDirectActivity activity, boolean wifiConnected) {
         super();
         this.wifiManager = wifiManager;
         this.activity = activity;
         this.wifiConnected = wifiConnected;
+        WiFiMateApp.getApp(activity).getWiFiMateComponent().inject(this);
     }
 
-    /**
-     * Called when the number of wifi connections has changed.
-     */
     public void onReceive(Context context, Intent intent) {
-
         String action = intent.getAction();
-
         if (WifiManager.SCAN_RESULTS_AVAILABLE_ACTION.equals(action)) {
-
             String wifiDirectSSID = null;
-
             StringBuilder sb = new StringBuilder();
             List<ScanResult> wifiList = this.wifiManager.getScanResults();
             sb.append("\n        Number Of Wifi connections :").append(wifiList.size()).append("\n\n");
-
             for (int i = 0; i < wifiList.size(); i++) {
                 if (wifiList.get(i).SSID.contains("DIRECT")) {
                     wifiDirectSSID = wifiList.get(i).SSID;
@@ -65,7 +62,6 @@ public class WiFiBroadcastReceiver extends BroadcastReceiver {
                 sb.append((wifiList.get(i)).toString());
                 sb.append("\n\n");
             }
-
             if (wifiDirectSSID == null || this.wifiConnected) {
                 Toast.makeText(activity, "Found no WiFi direct network to connect to", Toast.LENGTH_LONG).show();
             }
@@ -98,19 +94,17 @@ public class WiFiBroadcastReceiver extends BroadcastReceiver {
             Log.d(TAG, "	MAC address =" + wifiManager.getConnectionInfo().getMacAddress());
             Log.d(TAG, "	dhcp server=" + this.parseIpAddress(wifiManager.getDhcpInfo().serverAddress));
             Log.d(TAG, "	dhcp netmask =" + this.parseIpAddress(wifiManager.getDhcpInfo().netmask));
-
-            MeshNetworkRouter.setSelf(new Peer(
+            router.setCustomWiFiP2PDevice(new CustomWiFiP2PDevice(
                             wifiManager.getConnectionInfo().getMacAddress(),
                             Configuration.GROUP_OWNER_IP_ADDRESS,
                             wifiManager.getConnectionInfo().getMacAddress(),
                             wifiManager.getConnectionInfo().getMacAddress()
                     )
             );
-
             if (!Receiver.running) {
                 Receiver r = new Receiver(activity);
                 new Thread(r).start();
-                Sender s = new Sender();
+                Sender s = new Sender(activity);
                 new Thread(s).start();
             }
         } else if (detailedState == DetailedState.DISCONNECTING) {
@@ -135,13 +129,10 @@ public class WiFiBroadcastReceiver extends BroadcastReceiver {
     }
 
     private String parseIpAddress(int ipAddress) {
-
-        if (ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN)) { // convert little-endian to big-endian if needed
+        if (ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN)) {
             ipAddress = Integer.reverseBytes(ipAddress);
         }
-
         byte[] ipByteArray = BigInteger.valueOf(ipAddress).toByteArray();
-
         String ipAddressString;
         try {
             ipAddressString = InetAddress.getByAddress(ipByteArray).getHostAddress();

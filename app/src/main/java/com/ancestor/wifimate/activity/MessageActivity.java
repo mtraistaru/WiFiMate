@@ -8,14 +8,17 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.ancestor.wifimate.R;
-import com.ancestor.wifimate.router.MeshNetworkRouter;
-import com.ancestor.wifimate.router.Packet;
-import com.ancestor.wifimate.router.Peer;
-import com.ancestor.wifimate.router.Sender;
-import com.ancestor.wifimate.wifi.WiFiDirectBroadcastReceiver;
+import com.ancestor.wifimate.WiFiMateApp;
+import com.ancestor.wifimate.network.Router;
+import com.ancestor.wifimate.peer.CustomWiFiP2PDevice;
+import com.ancestor.wifimate.peer.Packet;
+import com.ancestor.wifimate.peer.PacketType;
+import com.ancestor.wifimate.peer.Sender;
+import com.ancestor.wifimate.receiver.WiFiDirectBroadcastReceiver;
+
+import javax.inject.Inject;
 
 /**
- * Activity for the group chat view
  * Created by Mihai.Traistaru on 23.10.2015
  */
 public class MessageActivity extends Activity {
@@ -24,16 +27,12 @@ public class MessageActivity extends Activity {
 
     private static TextView messageView;
 
-    /**
-     * Add a message to the view
-     * @param from the sender of the message
-     * @param text the text sent
-     */
-    public static void addMessage(String from, String text) {
+    @Inject
+    Router router;
 
+    public static void addMessage(String from, String text) {
         messageView.append(from + " says " + text + "\n");
         final int scrollAmount = messageView.getLayout().getLineTop(messageView.getLineCount()) - messageView.getHeight();
-        // if there is no need to scroll, scrollAmount will be <=0
         if (scrollAmount > 0)
             messageView.scrollTo(0, scrollAmount);
         else
@@ -44,30 +43,25 @@ public class MessageActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.message);
-
+        WiFiMateApp.getApp(this).getWiFiMateComponent().inject(this);
         messageView = (TextView) findViewById(R.id.message_view);
-
         final Button button = (Button) findViewById(R.id.btn_send);
         final EditText message = (EditText) findViewById(R.id.edit_message);
-
         this.setTitle("Group Chat");
-
         button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 String msgStr = message.getText().toString();
                 addMessage("This phone", msgStr);
                 message.setText("");
-
-                // Send to other clients as a group chat message
-                for (Peer c : MeshNetworkRouter.routingTable.values()) {
-                    if (c.getMacAddress().equals(MeshNetworkRouter.getSelf().getMacAddress())) {
+                for (CustomWiFiP2PDevice c : router.getRoutingTable().values()) {
+                    if (c.getMacAddress().equals(router.getCustomWiFiP2PDevice().getMacAddress())) {
                         continue;
                     }
                     Sender.queuePacket(new Packet(
-                            Packet.TYPE.MESSAGE,
+                            PacketType.MESSAGE,
                             msgStr.getBytes(),
                             c.getMacAddress(),
-                            WiFiDirectBroadcastReceiver.MAC));
+                            WiFiDirectBroadcastReceiver.macAddress));
                 }
             }
         });
