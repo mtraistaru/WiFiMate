@@ -12,6 +12,10 @@ public class Utils {
 
     private TextView chatMessageView;
 
+    public TextView getChatMessageView() {
+        return chatMessageView;
+    }
+
     public void setChatMessageView(TextView textView) {
         chatMessageView = textView;
     }
@@ -36,7 +40,7 @@ public class Utils {
     }
 
     public void insertChatMessage(Context context, String from, String text) {
-        chatMessageView.append(from + context.getResources().getString(R.string.Message_Says) + text + "\n");
+        chatMessageView.append(from + " " + context.getResources().getString(R.string.Message_Says) + " " + text + " " + "\n");
         final int scrollAmount = chatMessageView.getLayout().getLineTop(chatMessageView.getLineCount()) - chatMessageView.getHeight();
         if (scrollAmount > 0) {
             chatMessageView.scrollTo(0, scrollAmount);

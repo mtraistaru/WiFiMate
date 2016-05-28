@@ -2,18 +2,12 @@ package com.ancestor.wifimate.peer;
 
 import com.ancestor.wifimate.utils.Utils;
 
-import javax.inject.Inject;
-
 /**
  * Created by Mihai.Traistaru on 23.10.2015
  */
 public class Packet {
 
-    @Inject
-    Utils utils;
-
     private byte[] data;
-
     private PacketType packetType;
     private String receiverMacAddress;
     private String senderMac;
@@ -50,16 +44,22 @@ public class Packet {
         return packetType;
     }
 
-    public byte[] serialize() {
+    public byte[] serialize(Utils utils) {
         // 6 bytes for mac
         byte[] serialized = new byte[1 + data.length + 13];
         serialized[0] = (byte) packetType.ordinal();
         serialized[1] = (byte) timeToLive;
         byte[] mac = utils.getMacAsBytes(this.receiverMacAddress);
-        System.arraycopy(mac, 0, serialized, 2, 6);
+        for (int i = 2; i <= 7; i++) {
+            serialized[i] = mac[i - 2];
+        }
         mac = utils.getMacAsBytes(this.senderMac);
-        System.arraycopy(mac, 0, serialized, 8, 6);
-        System.arraycopy(data, 0, serialized, 14, serialized.length - 14);
+        for (int i = 8; i <= 13; i++) {
+            serialized[i] = mac[i - 8];
+        }
+        for (int i = 14; i < serialized.length; i++) {
+            serialized[i] = data[i - 14];
+        }
         return serialized;
     }
 

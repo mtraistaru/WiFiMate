@@ -2,9 +2,9 @@ package com.ancestor.wifimate.network;
 
 import android.util.Log;
 
-import com.ancestor.wifimate.utils.Utils;
 import com.ancestor.wifimate.peer.Packet;
 import com.ancestor.wifimate.peer.PacketType;
+import com.ancestor.wifimate.utils.Utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -12,8 +12,6 @@ import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
-import javax.inject.Inject;
 
 /**
  * Created by Mihai.Traistaru on 23.10.2015
@@ -25,10 +23,10 @@ public class StreamReceiverTCP implements Runnable {
     private ServerSocket serverSocket;
     private ConcurrentLinkedQueue<Packet> packetConcurrentLinkedQueue;
 
-    @Inject
-    Utils utils;
+    private Utils utils;
 
-    public StreamReceiverTCP(int port, ConcurrentLinkedQueue<Packet> queue) {
+    public StreamReceiverTCP(int port, ConcurrentLinkedQueue<Packet> queue, Utils utils) {
+        this.utils = utils;
         try {
             serverSocket = new ServerSocket(port);
         } catch (IOException e) {

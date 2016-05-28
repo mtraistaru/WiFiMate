@@ -85,7 +85,7 @@ public class Router {
     public void deserializeRoutingTableAndAdd(byte[] serializedRoutingTable) {
         String[] div = new String(serializedRoutingTable).split("\n");
         for (String s : div) {
-            CustomWiFiP2PDevice customWiFiP2PDevice = new CustomWiFiP2PDevice(s.split(",")[0], s.split(",")[1], s.split(",")[2], s.split(",")[3]);
+            CustomWiFiP2PDevice customWiFiP2PDevice = new CustomWiFiP2PDevice(s.split(",")[1], s.split(",")[0], s.split(",")[2], s.split(",")[3]);
             routingTable.put(customWiFiP2PDevice.getMacAddress(), customWiFiP2PDevice);
         }
     }

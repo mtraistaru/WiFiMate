@@ -159,7 +159,7 @@ public class MainActivity extends AppCompatActivity implements ChannelListener, 
                     public void onFailure(int reasonCode) {
                         View view = findViewById(R.id.fragment_peer_details);
                         if (view != null) {
-                            Snackbar.make(view, R.string.Message_DiscoverPeersError + reasonCode, Snackbar.LENGTH_SHORT).show();
+                            Snackbar.make(view, R.string.Message_DiscoverPeersError + " " + reasonCode, Snackbar.LENGTH_SHORT).show();
                         }
                     }
                 });
@@ -172,7 +172,7 @@ public class MainActivity extends AppCompatActivity implements ChannelListener, 
     @Override
     public void showDetails(WifiP2pDevice device) {
         PeerDetailsFragment fragment = (PeerDetailsFragment) getFragmentManager().findFragmentById(R.id.fragment_peer_details);
-        fragment.updateView(device);
+        fragment.updateView(device, router);
     }
 
     @Override
@@ -199,7 +199,7 @@ public class MainActivity extends AppCompatActivity implements ChannelListener, 
         wifiP2pManager.removeGroup(channel, new ActionListener() {
             @Override
             public void onFailure(int reasonCode) {
-                Log.d(TAG, getResources().getString(R.string.Message_DisconnectionError) + reasonCode);
+                Log.d(TAG, getResources().getString(R.string.Message_DisconnectionError) + " " + reasonCode);
             }
 
             @Override
@@ -249,7 +249,7 @@ public class MainActivity extends AppCompatActivity implements ChannelListener, 
                     public void onFailure(int reasonCode) {
                         View view = findViewById(R.id.fragment_peer_details);
                         if (view != null) {
-                            Snackbar.make(view, R.string.Message_CancelError + reasonCode, Snackbar.LENGTH_SHORT).show();
+                            Snackbar.make(view, R.string.Message_CancelError + " " + reasonCode, Snackbar.LENGTH_SHORT).show();
                         }
                     }
                 });
@@ -267,12 +267,12 @@ public class MainActivity extends AppCompatActivity implements ChannelListener, 
         if (wifiManager.getConnectionInfo().getIpAddress() != 0) {
             View view = findViewById(R.id.fragment_peer_details);
             if (view != null) {
-                Snackbar.make(view, R.string.Message_Connected + wifiManager.getConnectionInfo().getIpAddress(), Snackbar.LENGTH_LONG).show();
+                Snackbar.make(view, R.string.Message_Connected + " " + wifiManager.getConnectionInfo().getIpAddress(), Snackbar.LENGTH_LONG).show();
             }
         } else {
             View view = findViewById(R.id.fragment_peer_details);
             if (view != null) {
-                Snackbar.make(view, R.string.Message_NotConnected + wifiManager.getConnectionInfo().getIpAddress() + "(" + ssid + "," + password + ")", Snackbar.LENGTH_LONG).show();
+                Snackbar.make(view, R.string.Message_NotConnected + " " + wifiManager.getConnectionInfo().getIpAddress() + "(" + ssid + "," + password + ")", Snackbar.LENGTH_LONG).show();
             }
         }
     }

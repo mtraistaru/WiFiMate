@@ -40,7 +40,7 @@ public class Receiver implements Runnable {
 
     public void run() {
         ConcurrentLinkedQueue<Packet> packetQueue = new ConcurrentLinkedQueue<>();
-        new Thread(new StreamReceiverTCP(Configuration.RECEIVE_PORT, packetQueue)).start();
+        new Thread(new StreamReceiverTCP(Configuration.RECEIVE_PORT, packetQueue, utils)).start();
         Packet packet;
         do {
             while (packetQueue.isEmpty()) {
@@ -156,7 +156,9 @@ public class Receiver implements Runnable {
             @Override
             public void run() {
                 Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
-                utils.insertChatMessage(activity, name, msg);
+                if (utils.getChatMessageView() != null) {
+                    utils.insertChatMessage(activity, name, msg);
+                }
             }
         });
     }

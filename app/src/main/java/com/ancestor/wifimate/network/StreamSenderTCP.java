@@ -31,14 +31,15 @@ public class StreamSenderTCP {
     @Inject
     Utils utils;
 
+    Socket tcpSocket;
+
     public StreamSenderTCP(Activity activity) {
         this.activity = activity;
         WiFiMateApp.getApp(activity).getWiFiMateComponent().inject(this);
     }
 
-    public boolean sendPacket(String ip, int port, Packet data) {
+    public boolean sendPacket(String ip, int port, Packet data, Utils utils) {
         // Try to connect, otherwise remove from table
-        Socket tcpSocket;
         try {
             Log.d(TAG, "IP Address: " + ip);
             InetAddress serverAddress = InetAddress.getByName(ip);
@@ -56,7 +57,7 @@ public class StreamSenderTCP {
         OutputStream os;
         try {
             os = tcpSocket.getOutputStream();
-            os.write(data.serialize());
+            os.write(data.serialize(utils));
             os.close();
             tcpSocket.close();
         } catch (Exception e) {
@@ -77,7 +78,9 @@ public class StreamSenderTCP {
             @Override
             public void run() {
                 Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
-                utils.insertChatMessage(activity, name, msg);
+                if (utils.getChatMessageView() != null) {
+                    utils.insertChatMessage(activity, name, msg);
+                }
             }
         });
     }

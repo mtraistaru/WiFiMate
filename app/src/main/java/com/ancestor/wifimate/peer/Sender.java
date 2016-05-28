@@ -7,6 +7,7 @@ import com.ancestor.wifimate.Configuration;
 import com.ancestor.wifimate.WiFiMateApp;
 import com.ancestor.wifimate.network.Router;
 import com.ancestor.wifimate.network.StreamSenderTCP;
+import com.ancestor.wifimate.utils.Utils;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -23,6 +24,9 @@ public class Sender implements Runnable {
 
     @Inject
     Router router;
+
+    @Inject
+    Utils utils;
 
     private static ConcurrentLinkedQueue<Packet> packetConcurrentLinkedQueue;
 
@@ -54,7 +58,7 @@ public class Sender implements Runnable {
             }
             Packet p = packetConcurrentLinkedQueue.remove();
             String ip = router.getClientIpAddress(p.getMacAddress());
-            packetSender.sendPacket(ip, Configuration.RECEIVE_PORT, p);
+            packetSender.sendPacket(ip, Configuration.RECEIVE_PORT, p, utils);
 
         } while (true);
     }

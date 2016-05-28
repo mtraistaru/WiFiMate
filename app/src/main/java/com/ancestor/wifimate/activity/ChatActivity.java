@@ -63,7 +63,8 @@ public class ChatActivity extends AppCompatActivity {
                                     PacketType.MESSAGE,
                                     messageString.getBytes(),
                                     c.getMacAddress(),
-                                    WiFiDirectBroadcastReceiver.macAddress));
+                                    WiFiDirectBroadcastReceiver.macAddress
+                            ));
                         }
                     }
                 }

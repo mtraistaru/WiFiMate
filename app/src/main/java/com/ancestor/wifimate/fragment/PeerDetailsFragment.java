@@ -24,6 +24,7 @@ import com.ancestor.wifimate.peer.Packet;
 import com.ancestor.wifimate.peer.PacketType;
 import com.ancestor.wifimate.peer.Sender;
 import com.ancestor.wifimate.receiver.WiFiDirectBroadcastReceiver;
+import com.ancestor.wifimate.utils.Utils;
 
 import javax.inject.Inject;
 
@@ -38,11 +39,11 @@ public class PeerDetailsFragment extends Fragment implements ConnectionInfoListe
     private WifiP2pDevice device;
 
     @Inject
-    Router router;
+    Utils utils;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.device_detail, null);
+        View view = inflater.inflate(R.layout.peer_details, null);
         Button connectButton = (Button) view.findViewById(R.id.connectButton);
         connectButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -52,7 +53,7 @@ public class PeerDetailsFragment extends Fragment implements ConnectionInfoListe
                     progressDialog.dismiss();
                 }
                 progressDialog = ProgressDialog.show(getActivity(), getResources().getString(R.string.Message_CancelHint),
-                        getResources().getString(R.string.Message_ConnectingTo) + device.deviceAddress, true, true);
+                        getResources().getString(R.string.Message_ConnectingTo) + " " + device.deviceAddress, true, true);
                 ((PeerListFragment.DeviceActionListener) getActivity()).connect(wifiP2pConfig);
             }
         });
@@ -83,13 +84,13 @@ public class PeerDetailsFragment extends Fragment implements ConnectionInfoListe
         return config;
     }
 
-    public void updateView(WifiP2pDevice device) {
+    public void updateView(WifiP2pDevice device, Router router) {
         this.device = device;
         if (this.getView() != null) {
             this.getView().setVisibility(View.VISIBLE);
         }
         TextView view = (TextView) getView().findViewById(R.id.peerAddress);
-        String s = getResources().getString(R.string.Message_Online);
+        String s = getResources().getString(R.string.Message_Online) + " ";
         for (CustomWiFiP2PDevice c : router.getRoutingTable().values()) {
             s += c.getMacAddress() + "\n";
         }
@@ -114,7 +115,7 @@ public class PeerDetailsFragment extends Fragment implements ConnectionInfoListe
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (getView() != null) {
             TextView statusTextView = (TextView) getView().findViewById(R.id.status_text);
-            String statusText = getResources().getString(R.string.Message_Sending) + data.getData();
+            String statusText = getResources().getString(R.string.Message_Sending) + " " + data.getData();
             statusTextView.setText(statusText);
         }
     }

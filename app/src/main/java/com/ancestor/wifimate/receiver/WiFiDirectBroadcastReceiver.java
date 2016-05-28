@@ -95,7 +95,7 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
             if (networkInfo.isConnected()) {
                 PeerDetailsFragment fragment = (PeerDetailsFragment) activity.getFragmentManager().findFragmentById(R.id.fragment_peer_details);
                 manager.requestConnectionInfo(channel, fragment);
-            } else { // It's a disconnect
+            } else {
                 Log.d(TAG, "Action taken: WIFI_P2P_CONNECTION_CHANGED_ACTION - Disconnected.");
                 activity.resetData();
             }

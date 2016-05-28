@@ -7,7 +7,6 @@ import com.ancestor.wifimate.module.WiFiMateModule;
 import com.ancestor.wifimate.network.StreamSenderTCP;
 import com.ancestor.wifimate.peer.Receiver;
 import com.ancestor.wifimate.peer.Sender;
-import com.ancestor.wifimate.receiver.WiFiDirectBroadcastReceiver;
 
 import javax.inject.Singleton;
 
@@ -29,8 +28,6 @@ public interface WiFiMateComponent {
     void inject(StreamSenderTCP streamSenderTCP);
 
     void inject(Receiver receiver);
-
-    void inject(WiFiDirectBroadcastReceiver wiFiDirectBroadcastReceiver);
 
     void inject(Sender sender);
 }
