@@ -5,8 +5,8 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.ancestor.wifimate.WiFiMateApp;
-import com.ancestor.wifimate.activity.MessageActivity;
 import com.ancestor.wifimate.peer.Packet;
+import com.ancestor.wifimate.utils.Utils;
 
 import java.io.OutputStream;
 import java.net.InetAddress;
@@ -28,6 +28,9 @@ public class StreamSenderTCP {
     @Inject
     Router router;
 
+    @Inject
+    Utils utils;
+
     public StreamSenderTCP(Activity activity) {
         this.activity = activity;
         WiFiMateApp.getApp(activity).getWiFiMateComponent().inject(this);
@@ -37,16 +40,16 @@ public class StreamSenderTCP {
         // Try to connect, otherwise remove from table
         Socket tcpSocket;
         try {
-            System.out.println("IP: " + ip);
-            InetAddress serverAddr = InetAddress.getByName(ip);
+            Log.d(TAG, "IP Address: " + ip);
+            InetAddress serverAddress = InetAddress.getByName(ip);
             tcpSocket = new Socket();
             tcpSocket.bind(null);
-            tcpSocket.connect(new InetSocketAddress(serverAddr, port), 5000);
+            tcpSocket.connect(new InetSocketAddress(serverAddress, port), 5000);
         } catch (Exception e) {
             router.getRoutingTable().remove(data.getMacAddress());
             notifyPeerLeft(data.getMacAddress(), activity);
             router.updatePeerList(activity);
-            Log.e(TAG, "cannot connect", e);
+            Log.e(TAG, "connection error", e);
             return false;
         }
         // Try to send, otherwise remove from table
@@ -60,26 +63,21 @@ public class StreamSenderTCP {
             router.getRoutingTable().remove(data.getMacAddress());
             notifyPeerLeft(data.getMacAddress(), activity);
             router.updatePeerList(activity);
-            Log.e(TAG, "cannot send", e);
+            Log.e(TAG, "send error", e);
         }
         return true;
     }
 
-    /**
-     * Displays a notification when a peer left.
-     *
-     * @param MAC the MAC address of the one that left.
-     */
     private void notifyPeerLeft(String MAC, final Activity activity) {
         final String message;
         final String msg;
-        message = msg = MAC + " has left.";
+        message = msg = MAC + " went offline.";
         final String name = MAC;
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
-                MessageActivity.addMessage(name, msg);
+                utils.insertChatMessage(activity, name, msg);
             }
         });
     }

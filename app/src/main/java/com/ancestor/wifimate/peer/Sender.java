@@ -49,7 +49,7 @@ public class Sender implements Runnable {
                 try {
                     Thread.sleep(2000);
                 } catch (InterruptedException e) {
-                    Log.e(TAG, "couldn't sleep StreamSenderTCP thread", e);
+                    Log.e(TAG, "StreamSenderTCP thread sleep error", e);
                 }
             }
             Packet p = packetConcurrentLinkedQueue.remove();

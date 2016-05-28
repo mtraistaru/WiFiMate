@@ -10,7 +10,7 @@ import com.ancestor.wifimate.module.WiFiMateModule;
  */
 public class WiFiMateApp extends Application {
 
-    WiFiMateComponent wiFiMateComponent;
+    private WiFiMateComponent wiFiMateComponent;
 
     public static WiFiMateApp getApp(Context context) {
         return (WiFiMateApp) context.getApplicationContext();

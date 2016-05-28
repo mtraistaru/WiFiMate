@@ -38,8 +38,8 @@ public class WiFiMateModule {
 
     @Singleton
     @Provides
-    Router provideRouter() {
-        return new Router();
+    Router provideRouter(Context context) {
+        return new Router(context);
     }
 
     @Singleton

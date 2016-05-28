@@ -5,10 +5,9 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.ancestor.wifimate.Configuration;
+import com.ancestor.wifimate.activity.MainActivity;
 import com.ancestor.wifimate.utils.Utils;
 import com.ancestor.wifimate.WiFiMateApp;
-import com.ancestor.wifimate.activity.MessageActivity;
-import com.ancestor.wifimate.activity.WiFiDirectActivity;
 import com.ancestor.wifimate.network.Router;
 import com.ancestor.wifimate.network.StreamReceiverTCP;
 
@@ -25,7 +24,7 @@ public class Receiver implements Runnable {
 
     public static boolean running = false;
 
-    private WiFiDirectActivity wiFiDirectActivity;
+    private MainActivity mainActivity;
 
     @Inject
     Router router;
@@ -33,9 +32,9 @@ public class Receiver implements Runnable {
     @Inject
     Utils utils;
 
-    public Receiver(WiFiDirectActivity wiFiDirectActivity) {
-        this.wiFiDirectActivity = wiFiDirectActivity;
-        WiFiMateApp.getApp(wiFiDirectActivity).getWiFiMateComponent().inject(this);
+    public Receiver(MainActivity mainActivity) {
+        this.mainActivity = mainActivity;
+        WiFiMateApp.getApp(mainActivity).getWiFiMateComponent().inject(this);
         running = true;
     }
 
@@ -48,7 +47,7 @@ public class Receiver implements Runnable {
                 try {
                     Thread.sleep(2000);
                 } catch (InterruptedException e) {
-                    Log.e(TAG, "StreamReceiverTCP thread couldn't sleep", e);
+                    Log.e(TAG, "StreamReceiverTCP thread sleep error", e);
                 }
             }
             packet = packetQueue.remove();
@@ -79,15 +78,15 @@ public class Receiver implements Runnable {
                         router.getCustomWiFiP2PDevice().getMacAddress()
                 );
                 Sender.queuePacket(ack);
-                notifyPeerJoined(packet.getSenderMac(), wiFiDirectActivity);
-                router.updatePeerList(wiFiDirectActivity);
+                notifyPeerJoined(packet.getSenderMac(), mainActivity);
+                router.updatePeerList(mainActivity);
             } else {
                 if (packet.getMacAddress().equals(router.getCustomWiFiP2PDevice().getMacAddress())) {
                     if (packet.getPacketType().equals(PacketType.HELLO_ACKNOWLEDGED)) {
                         router.deserializeRoutingTableAndAdd(packet.getData());
                         router.getCustomWiFiP2PDevice().setGroupOwnerMacAddress(packet.getSenderMac());
-                        notifyPeerJoined(packet.getSenderMac(), wiFiDirectActivity);
-                        router.updatePeerList(wiFiDirectActivity);
+                        notifyPeerJoined(packet.getSenderMac(), mainActivity);
+                        router.updatePeerList(mainActivity);
                     } else if (packet.getPacketType().equals(PacketType.UPDATE)) {
                         String mac = utils.getMacBytesAsString(packet.getData(), 0);
                         router.getRoutingTable().put(mac, new CustomWiFiP2PDevice(
@@ -97,19 +96,19 @@ public class Receiver implements Runnable {
                                         router.getCustomWiFiP2PDevice().getMacAddress()
                                 )
                         );
-                        final String message = mac + " joined the conversation";
+                        final String message = mac + " has come online";
                         final String name = packet.getSenderMac();
-                        wiFiDirectActivity.runOnUiThread(new Runnable() {
+                        mainActivity.runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                if (wiFiDirectActivity.isVisible) {
-                                    Toast.makeText(wiFiDirectActivity, message, Toast.LENGTH_LONG).show();
+                                if (mainActivity.isVisible) {
+                                    Toast.makeText(mainActivity, message, Toast.LENGTH_LONG).show();
                                 } else {
-                                    MessageActivity.addMessage(name, message);
+                                    utils.insertChatMessage(mainActivity, name, message);
                                 }
                             }
                         });
-                        router.updatePeerList(wiFiDirectActivity);
+                        router.updatePeerList(mainActivity);
                     } else if (packet.getPacketType().equals(PacketType.MESSAGE)) {
                         final String message = packet.getSenderMac() + " says:\n" + new String(packet.getData());
                         final String msg = new String(packet.getData());
@@ -123,17 +122,17 @@ public class Receiver implements Runnable {
                                     )
                             );
                         }
-                        wiFiDirectActivity.runOnUiThread(new Runnable() {
+                        mainActivity.runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                if (wiFiDirectActivity.isVisible) {
-                                    Toast.makeText(wiFiDirectActivity, message, Toast.LENGTH_LONG).show();
+                                if (mainActivity.isVisible) {
+                                    Toast.makeText(mainActivity, message, Toast.LENGTH_LONG).show();
                                 } else {
-                                    MessageActivity.addMessage(name, msg);
+                                    utils.insertChatMessage(mainActivity, name, msg);
                                 }
                             }
                         });
-                        router.updatePeerList(wiFiDirectActivity);
+                        router.updatePeerList(mainActivity);
                     }
                 } else {
                     int TTL = packet.getTimeToLive();
@@ -150,14 +149,14 @@ public class Receiver implements Runnable {
     private void notifyPeerJoined(String MAC, final Activity activity) {
         final String message;
         final String msg;
-        message = msg = MAC + " has joined.";
+        message = msg = MAC + " is online.";
         final String name = MAC;
         activity.runOnUiThread(new Runnable() {
 
             @Override
             public void run() {
                 Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
-                MessageActivity.addMessage(name, msg);
+                utils.insertChatMessage(activity, name, msg);
             }
         });
     }

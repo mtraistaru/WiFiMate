@@ -1,13 +1,12 @@
 package com.ancestor.wifimate;
 
+import com.ancestor.wifimate.activity.ChatActivity;
 import com.ancestor.wifimate.activity.MainActivity;
-import com.ancestor.wifimate.activity.MessageActivity;
-import com.ancestor.wifimate.fragment.DeviceDetailFragment;
+import com.ancestor.wifimate.fragment.PeerDetailsFragment;
 import com.ancestor.wifimate.module.WiFiMateModule;
 import com.ancestor.wifimate.network.StreamSenderTCP;
 import com.ancestor.wifimate.peer.Receiver;
 import com.ancestor.wifimate.peer.Sender;
-import com.ancestor.wifimate.receiver.WiFiBroadcastReceiver;
 import com.ancestor.wifimate.receiver.WiFiDirectBroadcastReceiver;
 
 import javax.inject.Singleton;
@@ -23,15 +22,13 @@ public interface WiFiMateComponent {
 
     void inject(MainActivity mainActivity);
 
-    void inject(MessageActivity messageActivity);
+    void inject(ChatActivity chatActivity);
 
-    void inject(DeviceDetailFragment deviceDetailFragment);
+    void inject(PeerDetailsFragment peerDetailsFragment);
 
     void inject(StreamSenderTCP streamSenderTCP);
 
     void inject(Receiver receiver);
-
-    void inject(WiFiBroadcastReceiver wiFiBroadcastReceiver);
 
     void inject(WiFiDirectBroadcastReceiver wiFiDirectBroadcastReceiver);
 

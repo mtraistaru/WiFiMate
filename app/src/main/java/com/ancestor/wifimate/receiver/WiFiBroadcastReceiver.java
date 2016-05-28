@@ -11,8 +11,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.ancestor.wifimate.Configuration;
-import com.ancestor.wifimate.WiFiMateApp;
-import com.ancestor.wifimate.activity.WiFiDirectActivity;
+import com.ancestor.wifimate.activity.MainActivity;
 import com.ancestor.wifimate.network.Router;
 import com.ancestor.wifimate.peer.CustomWiFiP2PDevice;
 import com.ancestor.wifimate.peer.Receiver;
@@ -24,8 +23,6 @@ import java.net.UnknownHostException;
 import java.nio.ByteOrder;
 import java.util.List;
 
-import javax.inject.Inject;
-
 /**
  * Created by Mihai.Traistaru on 23.10.2015
  */
@@ -33,18 +30,16 @@ public class WiFiBroadcastReceiver extends BroadcastReceiver {
 
     private static final String TAG = WiFiBroadcastReceiver.class.getName();
     private WifiManager wifiManager;
-    private WiFiDirectActivity activity;
+    private MainActivity activity;
     private boolean wifiConnected;
+    private Router router;
 
-    @Inject
-    Router router;
-
-    public WiFiBroadcastReceiver(WifiManager wifiManager, WiFiDirectActivity activity, boolean wifiConnected) {
+    public WiFiBroadcastReceiver(WifiManager wifiManager, MainActivity activity, boolean wifiConnected, Router router) {
         super();
         this.wifiManager = wifiManager;
         this.activity = activity;
         this.wifiConnected = wifiConnected;
-        WiFiMateApp.getApp(activity).getWiFiMateComponent().inject(this);
+        this.router = router;
     }
 
     public void onReceive(Context context, Intent intent) {
@@ -53,7 +48,7 @@ public class WiFiBroadcastReceiver extends BroadcastReceiver {
             String wifiDirectSSID = null;
             StringBuilder sb = new StringBuilder();
             List<ScanResult> wifiList = this.wifiManager.getScanResults();
-            sb.append("\n        Number Of Wifi connections :").append(wifiList.size()).append("\n\n");
+            sb.append("\nConnections: ").append(wifiList.size()).append("\n\n");
             for (int i = 0; i < wifiList.size(); i++) {
                 if (wifiList.get(i).SSID.contains("DIRECT")) {
                     wifiDirectSSID = wifiList.get(i).SSID;
@@ -63,7 +58,7 @@ public class WiFiBroadcastReceiver extends BroadcastReceiver {
                 sb.append("\n\n");
             }
             if (wifiDirectSSID == null || this.wifiConnected) {
-                Toast.makeText(activity, "Found no WiFi direct network to connect to", Toast.LENGTH_LONG).show();
+                Toast.makeText(activity, "No networks to connect to", Toast.LENGTH_LONG).show();
             }
         } else if (WifiManager.WIFI_STATE_CHANGED_ACTION.equals(action)) {
             Log.d(TAG, "WIFI_STATE_CHANGED_ACTION");
@@ -73,27 +68,27 @@ public class WiFiBroadcastReceiver extends BroadcastReceiver {
             Log.d(TAG, "NETWORK_STATE_CHANGED_ACTION");
             NetworkInfo netInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
             DetailedState state = netInfo.getDetailedState();
-            Log.d(TAG, "	state = " + state.name());
+            Log.d(TAG, "State: " + state.name());
             changeState(state);
         }
     }
 
     private void changeState(DetailedState detailedState) {
         if (detailedState == DetailedState.SCANNING) {
-            Log.d(TAG, "SCANNING");
+            Log.d(TAG, "scanning...");
         } else if (detailedState == DetailedState.CONNECTING) {
-            Log.d(TAG, "CONNECTING");
+            Log.d(TAG, "connecting...");
         } else if (detailedState == DetailedState.OBTAINING_IPADDR) {
-            Log.d(TAG, "OBTAINING IP ADDRESS");
+            Log.d(TAG, "getting ip address...");
         } else if (detailedState == DetailedState.CONNECTED) {
-            Log.d(TAG, "CONNECTED");
-            Log.d(TAG, "	basic ssid =" + wifiManager.getConnectionInfo().getBSSID());
-            Log.d(TAG, "	ip address =" + this.parseIpAddress(wifiManager.getConnectionInfo().getIpAddress()));
-            Log.d(TAG, "	ssid =" + wifiManager.getConnectionInfo().getSSID());
-            Log.d(TAG, "	dhcp gateway =" + this.parseIpAddress(wifiManager.getDhcpInfo().gateway));
-            Log.d(TAG, "	MAC address =" + wifiManager.getConnectionInfo().getMacAddress());
-            Log.d(TAG, "	dhcp server=" + this.parseIpAddress(wifiManager.getDhcpInfo().serverAddress));
-            Log.d(TAG, "	dhcp netmask =" + this.parseIpAddress(wifiManager.getDhcpInfo().netmask));
+            Log.d(TAG, "Connected.");
+            Log.d(TAG, "BSSID: " + wifiManager.getConnectionInfo().getBSSID());
+            Log.d(TAG, "IP Address: " + this.parseIpAddress(wifiManager.getConnectionInfo().getIpAddress()));
+            Log.d(TAG, "SSID: " + wifiManager.getConnectionInfo().getSSID());
+            Log.d(TAG, "DHCP Gateway: " + this.parseIpAddress(wifiManager.getDhcpInfo().gateway));
+            Log.d(TAG, "MAC Address: " + wifiManager.getConnectionInfo().getMacAddress());
+            Log.d(TAG, "DHCP Server: " + this.parseIpAddress(wifiManager.getDhcpInfo().serverAddress));
+            Log.d(TAG, "DHCP Netmask: " + this.parseIpAddress(wifiManager.getDhcpInfo().netmask));
             router.setCustomWiFiP2PDevice(new CustomWiFiP2PDevice(
                             wifiManager.getConnectionInfo().getMacAddress(),
                             Configuration.GROUP_OWNER_IP_ADDRESS,
@@ -108,15 +103,15 @@ public class WiFiBroadcastReceiver extends BroadcastReceiver {
                 new Thread(s).start();
             }
         } else if (detailedState == DetailedState.DISCONNECTING) {
-            Log.d(TAG, "DISCONNECTING");
+            Log.d(TAG, "disconnecting...");
         } else if (detailedState == DetailedState.DISCONNECTED) {
-            Log.d(TAG, "DISCONNECTED");
+            Log.d(TAG, "Disconnected.");
         } else if (detailedState == DetailedState.FAILED) {
             // TODO
         }
     }
 
-    public void checkState(int state) {
+    private void checkState(int state) {
         if (state == WifiManager.WIFI_STATE_ENABLING) {
             Log.d(TAG, "WIFI_STATE_ENABLING");
         } else if (state == WifiManager.WIFI_STATE_ENABLED) {
@@ -137,7 +132,7 @@ public class WiFiBroadcastReceiver extends BroadcastReceiver {
         try {
             ipAddressString = InetAddress.getByAddress(ipByteArray).getHostAddress();
         } catch (UnknownHostException ex) {
-            Log.e(TAG, "Unable to get the host address.");
+            Log.e(TAG, "Can't get host ip.");
             ipAddressString = null;
         }
         return ipAddressString;

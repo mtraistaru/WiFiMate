@@ -42,11 +42,11 @@ public class Packet {
         this.timeToLive = timeToLive;
     }
 
-    public byte[] getData() {
+    byte[] getData() {
         return data;
     }
 
-    public PacketType getPacketType() {
+    PacketType getPacketType() {
         return packetType;
     }
 
@@ -67,11 +67,11 @@ public class Packet {
         return receiverMacAddress;
     }
 
-    public String getSenderMac() {
+    String getSenderMac() {
         return senderMac;
     }
 
-    public String getSenderIP() {
+    String getSenderIP() {
         return senderIP;
     }
 
@@ -84,11 +84,11 @@ public class Packet {
         return "Type" + getPacketType().toString() + "receiver:" + getMacAddress() + "sender:" + getSenderMac();
     }
 
-    public int getTimeToLive() {
+    int getTimeToLive() {
         return timeToLive;
     }
 
-    public void setTimeToLive(int timeToLive) {
+    void setTimeToLive(int timeToLive) {
         this.timeToLive = timeToLive;
     }
 }

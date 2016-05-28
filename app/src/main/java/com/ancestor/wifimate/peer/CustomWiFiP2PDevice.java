@@ -27,7 +27,7 @@ public class CustomWiFiP2PDevice {
         return groupOwnerMacAddress;
     }
 
-    public void setGroupOwnerMacAddress(String groupOwnerMacAddress) {
+    void setGroupOwnerMacAddress(String groupOwnerMacAddress) {
         this.groupOwnerMacAddress = groupOwnerMacAddress;
     }
 

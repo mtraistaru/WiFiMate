@@ -1,10 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    tools:context=".MainActivity">
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
     <item
-        android:id="@+id/action_settings"
-        android:orderInCategory="100"
-        android:title="@string/action_settings"
-        app:showAsAction="never" />
+        android:id="@+id/enableWiFiDirect"
+        android:icon="@drawable/ic_settings_input_antenna_white_48dp"
+        android:title="@string/Button.EnableP2P"
+        app:showAsAction="ifRoom|withText" />
+    <item
+        android:id="@+id/discoverPeers"
+        android:icon="@drawable/ic_search_white_48dp"
+        android:title="@string/Button.DiscoverPeers"
+        app:showAsAction="ifRoom|withText" />
+
 </menu>

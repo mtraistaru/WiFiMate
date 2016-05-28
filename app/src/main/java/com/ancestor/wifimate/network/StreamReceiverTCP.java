@@ -32,7 +32,7 @@ public class StreamReceiverTCP implements Runnable {
         try {
             serverSocket = new ServerSocket(port);
         } catch (IOException e) {
-            Log.e(TAG, "Server socket on port " + port + " could not be created. ", e);
+            Log.e(TAG, "Socket server " + port + " not created.", e);
         }
         packetConcurrentLinkedQueue = queue;
     }
@@ -59,7 +59,7 @@ public class StreamReceiverTCP implements Runnable {
                 packetConcurrentLinkedQueue.add(p);
                 socket.close();
             } catch (IOException e) {
-                Log.e(TAG, "error while running StreamReceiverTCP thread", e);
+                Log.e(TAG, "StreamReceiverTCP thread error", e);
             }
         }
     }

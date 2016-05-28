@@ -30,16 +30,13 @@ import android.util.Log;
 
 import com.ancestor.wifimate.Configuration;
 import com.ancestor.wifimate.R;
-import com.ancestor.wifimate.WiFiMateApp;
-import com.ancestor.wifimate.activity.WiFiDirectActivity;
-import com.ancestor.wifimate.fragment.DeviceDetailFragment;
-import com.ancestor.wifimate.fragment.DeviceListFragment;
+import com.ancestor.wifimate.activity.MainActivity;
+import com.ancestor.wifimate.fragment.PeerDetailsFragment;
+import com.ancestor.wifimate.fragment.PeerListFragment;
 import com.ancestor.wifimate.network.Router;
 import com.ancestor.wifimate.peer.CustomWiFiP2PDevice;
 import com.ancestor.wifimate.peer.Receiver;
 import com.ancestor.wifimate.peer.Sender;
-
-import javax.inject.Inject;
 
 /**
  * Created by Mihai.Traistaru on 23.10.2015
@@ -51,61 +48,59 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
     public static String macAddress;
     private WifiP2pManager manager;
     private Channel channel;
-    private WiFiDirectActivity activity;
+    private MainActivity activity;
+    private Router router;
 
-    @Inject
-    Router router;
-
-    public WiFiDirectBroadcastReceiver(WifiP2pManager manager, Channel channel, WiFiDirectActivity activity) {
+    public WiFiDirectBroadcastReceiver(WifiP2pManager manager, Channel channel, MainActivity activity, Router router) {
         super();
         this.manager = manager;
         this.channel = channel;
         this.activity = activity;
-        WiFiMateApp.getApp(activity).getWiFiMateComponent().inject(this);
+        this.router = router;
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
         if (WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION.equals(action)) {
-            int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1); // UI update to indicate wifi p2p status.
+            int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
             if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
                 activity.setWifiP2PEnabled(true);
                 manager.createGroup(channel, new ActionListener() {
                     @Override
                     public void onSuccess() {
-                        Log.d(TAG, "P2P Group created");
+                        Log.d(TAG, "group created");
                     }
 
                     @Override
                     public void onFailure(int reason) {
-                        Log.d(TAG, "P2P Group failed");
+                        Log.d(TAG, "group failed");
                     }
                 });
             } else {
                 activity.setWifiP2PEnabled(false);
                 activity.resetData();
             }
-            Log.d(TAG, "P2P ACTION : WIFI_P2P_STATE_CHANGED_ACTION state = " + state);
+            Log.d(TAG, "Action taken: WIFI_P2P_STATE_CHANGED_ACTION state: " + state);
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
             if (manager != null) {
-                manager.requestPeers(channel, (PeerListListener) activity.getFragmentManager().findFragmentById(R.id.frag_list));
+                manager.requestPeers(channel, (PeerListListener) activity.getFragmentManager().findFragmentById(R.id.fragment_peer_list));
             }
-            Log.d(TAG, "P2P ACTION : WIFI_P2P_PEERS_CHANGED_ACTION");
+            Log.d(TAG, "Action taken: WIFI_P2P_PEERS_CHANGED_ACTION");
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
             if (manager == null) {
                 return;
             }
             NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
-            if (networkInfo.isConnected()) {// we are connected with the other device, request connection info to find group owner IP
-                DeviceDetailFragment fragment = (DeviceDetailFragment) activity.getFragmentManager().findFragmentById(R.id.frag_detail);
+            if (networkInfo.isConnected()) {
+                PeerDetailsFragment fragment = (PeerDetailsFragment) activity.getFragmentManager().findFragmentById(R.id.fragment_peer_details);
                 manager.requestConnectionInfo(channel, fragment);
             } else { // It's a disconnect
-                Log.d(TAG, "P2P ACTION : WIFI_P2P_CONNECTION_CHANGED_ACTION -- DISCONNECT");
+                Log.d(TAG, "Action taken: WIFI_P2P_CONNECTION_CHANGED_ACTION - Disconnected.");
                 activity.resetData();
             }
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
-            DeviceListFragment fragment = (DeviceListFragment) activity.getFragmentManager().findFragmentById(R.id.frag_list);
+            PeerListFragment fragment = (PeerListFragment) activity.getFragmentManager().findFragmentById(R.id.fragment_peer_list);
             fragment.updateThisDevice((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE));
             macAddress = ((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)).deviceAddress;
             router.setCustomWiFiP2PDevice(new CustomWiFiP2PDevice(
@@ -123,11 +118,10 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
                         @Override
                         public void onGroupInfoAvailable(WifiP2pGroup group) {
                             if (group != null) {
-                                // clients require these
                                 String ssid = group.getNetworkName();
-                                String passphrase = group.getPassphrase();
-                                Log.d(TAG, "GROUP INFO AVAILABLE");
-                                Log.d(TAG, " SSID : " + ssid + "\n Passphrase : " + passphrase);
+                                String password = group.getPassphrase();
+                                Log.d(TAG, "Group details");
+                                Log.d(TAG, "ssid: " + ssid + "\npassword: " + password);
                             }
                         }
                     }

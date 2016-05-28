@@ -1,6 +1,7 @@
 package com.ancestor.wifimate.network;
 
 import android.app.Activity;
+import android.content.Context;
 import android.util.Log;
 import android.widget.TextView;
 
@@ -21,6 +22,12 @@ public class Router {
 
     private CustomWiFiP2PDevice customWiFiP2PDevice;
 
+    private Context context;
+
+    public Router(Context context) {
+        this.context = context;
+    }
+
     public ConcurrentHashMap<String, CustomWiFiP2PDevice> getRoutingTable() {
         return routingTable;
     }
@@ -34,16 +41,16 @@ public class Router {
         routingTable.put(customWiFiP2PDevice.getMacAddress(), customWiFiP2PDevice);
     }
 
-    public String getClientIpAddress(CustomWiFiP2PDevice customWiFiP2PDevice) {
-        if (customWiFiP2PDevice.getGroupOwnerMacAddress().equals(customWiFiP2PDevice.getGroupOwnerMacAddress())) {
-            Log.d(TAG, "Have the same group owner, sending to :" + customWiFiP2PDevice.getIpAddress());
+    private String getClientIpAddress(CustomWiFiP2PDevice customWiFiP2PDevice) {
+        if (this.customWiFiP2PDevice.getGroupOwnerMacAddress().equals(customWiFiP2PDevice.getGroupOwnerMacAddress())) {
+            Log.d(TAG, "Same GO, sending msg at: " + customWiFiP2PDevice.getIpAddress());
             return customWiFiP2PDevice.getIpAddress(); // shares the same Group-Owner, so it's okay to use its IP
         }
         CustomWiFiP2PDevice groupOwner = routingTable.get(customWiFiP2PDevice.getGroupOwnerMacAddress());
-        if (customWiFiP2PDevice.getGroupOwnerMacAddress().equals(customWiFiP2PDevice.getMacAddress())) { // this is the group owner so can propagate
-            if (!customWiFiP2PDevice.getGroupOwnerMacAddress().equals(customWiFiP2PDevice.getGroupOwnerMacAddress()) && groupOwner.isDirectLink()) {
+        if (this.customWiFiP2PDevice.getGroupOwnerMacAddress().equals(this.customWiFiP2PDevice.getMacAddress())) { // this is the group owner so can propagate
+            if (!this.customWiFiP2PDevice.getGroupOwnerMacAddress().equals(customWiFiP2PDevice.getGroupOwnerMacAddress()) && groupOwner.isDirectLink()) {
                 return customWiFiP2PDevice.getIpAddress(); // not the same group owner, but we have the group owner as a direct link
-            } else if (groupOwner != null && !customWiFiP2PDevice.getGroupOwnerMacAddress().equals(customWiFiP2PDevice.getGroupOwnerMacAddress()) && !groupOwner.isDirectLink()) {
+            } else if (groupOwner != null && !this.customWiFiP2PDevice.getGroupOwnerMacAddress().equals(customWiFiP2PDevice.getGroupOwnerMacAddress()) && !groupOwner.isDirectLink()) {
                 for (CustomWiFiP2PDevice p : routingTable.values()) {
                     if (p.getGroupOwnerMacAddress().equals(p.getMacAddress())) {
                         return p.getIpAddress(); //try sending it to a random group owner; can also expand this to all group owners
@@ -60,7 +67,7 @@ public class Router {
     public String getClientIpAddress(String macAddress) {
         CustomWiFiP2PDevice c = routingTable.get(macAddress);
         if (c == null) {
-            Log.d(TAG, "NULL ENTRY in ROUTING TABLE FOR MAC");
+            Log.d(TAG, "null macs found...");
             return Configuration.GROUP_OWNER_IP_ADDRESS;
         }
         return getClientIpAddress(c);
@@ -89,9 +96,9 @@ public class Router {
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                TextView view = (TextView) activity.findViewById(R.id.device_address);
+                TextView view = (TextView) activity.findViewById(R.id.peerAddress);
                 if (view != null) {
-                    String s = "Currently in the network chatting: \n";
+                    String s = context.getResources().getString(R.string.Message_Online) + " \n";
                     for (CustomWiFiP2PDevice c : routingTable.values()) {
                         s += c.getMacAddress() + "\n";
                     }
